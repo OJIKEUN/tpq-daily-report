@@ -1,0 +1,22 @@
+{
+  "name": "TPQ Daily Report",
+  "short_name": "TPQ Report",
+  "description": "Aplikasi pencatatan laporan harian Guru TPQ Daruttaubah",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#10b981",
+  "background_color": "#f0fdf4",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
+}

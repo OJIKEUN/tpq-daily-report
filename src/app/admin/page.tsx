@@ -54,7 +54,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="card bg-base-100 shadow-sm border border-base-200 mb-4 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md hover:border-base-300 group">
+        <Link href="/admin/teachers" className="card bg-base-100 shadow-sm border border-base-200 mb-4 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md hover:border-base-300 group block">
           <div className="card-body p-5 flex-row gap-4 items-start">
             <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0 group-active:scale-95 transition-transform">
               <Users size={22} className="text-white" />
@@ -62,12 +62,12 @@ export default function AdminPage() {
             <div className="flex-1">
               <h3 className="font-bold text-base-content text-[15px]">Manajemen Guru</h3>
               <p className="text-xs text-base-content/60 mt-1 leading-relaxed">Lihat daftar guru, atur akses, dan reset password.</p>
-              <div className="badge badge-primary badge-outline badge-sm mt-3 font-semibold">Segera hadir &rarr;</div>
+              <div className="text-primary text-xs font-semibold mt-3 flex items-center gap-1 group-hover:underline">Buka menu &rarr;</div>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="card bg-base-100 shadow-sm border border-base-200 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md hover:border-base-300 group">
+        <Link href="/admin/reports" className="card bg-base-100 shadow-sm border border-base-200 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md hover:border-base-300 group block">
           <div className="card-body p-5 flex-row gap-4 items-start">
             <div className="w-12 h-12 rounded-xl bg-violet-500 flex items-center justify-center shadow-md shadow-violet-500/20 shrink-0 group-active:scale-95 transition-transform">
               <BarChart3 size={22} className="text-white" />
@@ -75,10 +75,10 @@ export default function AdminPage() {
             <div className="flex-1">
               <h3 className="font-bold text-base-content text-[15px]">Rekap Semua Laporan</h3>
               <p className="text-xs text-base-content/60 mt-1 leading-relaxed">Pantau laporan harian dari seluruh guru TPQ.</p>
-              <div className="badge badge-primary badge-outline badge-sm mt-3 font-semibold">Segera hadir &rarr;</div>
+              <div className="text-violet-600 text-xs font-semibold mt-3 flex items-center gap-1 group-hover:underline">Buka menu &rarr;</div>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
     </div>
   );

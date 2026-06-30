@@ -70,7 +70,7 @@ export default function CreateReportPage() {
                   <span className="label-text font-semibold">Hari / Tanggal</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
                     <Calendar size={18} />
                   </div>
                   <input
@@ -88,7 +88,7 @@ export default function CreateReportPage() {
                   <span className="label-text font-semibold">Kegiatan Mengajar</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute top-3 left-3 text-base-content/40 pointer-events-none">
+                  <div className="absolute top-3 left-3 text-primary pointer-events-none">
                     <FileText size={18} />
                   </div>
                   <textarea
@@ -106,7 +106,7 @@ export default function CreateReportPage() {
                   <span className="label-text font-semibold">Keterangan <span className="text-base-content/50 font-normal">(opsional)</span></span>
                 </label>
                 <div className="relative">
-                  <div className="absolute top-3 left-3 text-base-content/40 pointer-events-none">
+                  <div className="absolute top-3 left-3 text-primary pointer-events-none">
                     <AlignLeft size={18} />
                   </div>
                   <textarea

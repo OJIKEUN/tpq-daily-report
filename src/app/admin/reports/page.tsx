@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { collection, query, where, orderBy, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Pencil, Trash2, FileText, CalendarX2, ChevronLeft, Plus, Filter } from 'lucide-react';
+import { FileText, CalendarX2, ChevronLeft, Filter, BarChart3, Trash2, User } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 
@@ -16,13 +16,14 @@ const MONTHS = [
 
 interface Report {
   id: string;
+  user_name: string;
   report_date: string;
   activity: string;
   description: string;
 }
 
-export default function HistoryPage() {
-  const { user, loading } = useAuth();
+export default function GlobalReportsPage() {
+  const { user, userData, loading } = useAuth();
   const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -35,33 +36,42 @@ export default function HistoryPage() {
   const YEARS = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
   useEffect(() => {
-    if (!loading && !user) router.push('/');
-    else if (user) {
-      setFetching(true);
-      const m = selectedMonth + 1;
-      const start = `${selectedYear}-${String(m).padStart(2,'0')}-01`;
-      const last = new Date(selectedYear, m, 0).getDate();
-      const end = `${selectedYear}-${String(m).padStart(2,'0')}-${last}`;
+    if (!loading && (!user || userData?.role !== 'admin')) {
+      router.push('/');
+    } else if (user && userData?.role === 'admin') {
+      fetchReports();
+    }
+  }, [user, userData, loading, router, selectedMonth, selectedYear]);
 
-      getDocs(
+  const fetchReports = async () => {
+    setFetching(true);
+    const m = selectedMonth + 1;
+    const start = `${selectedYear}-${String(m).padStart(2,'0')}-01`;
+    const last = new Date(selectedYear, m, 0).getDate();
+    const end = `${selectedYear}-${String(m).padStart(2,'0')}-${last}`;
+
+    try {
+      const snap = await getDocs(
         query(
           collection(db, 'reports'), 
-          where('user_id', '==', user.uid),
           where('report_date', '>=', start),
           where('report_date', '<=', end),
           orderBy('report_date', 'desc')
         )
-      ).then((snap) => {
-        const list: Report[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...d.data() } as Report));
-        setReports(list);
-      }).catch(console.error).finally(() => setFetching(false));
+      );
+      const list: Report[] = [];
+      snap.forEach((d) => list.push({ id: d.id, ...d.data() } as Report));
+      setReports(list);
+    } catch (error) {
+      console.error("Error fetching reports", error);
+    } finally {
+      setFetching(false);
     }
-  }, [user, loading, router, selectedMonth, selectedYear]);
+  };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Hapus laporan ini?')) return;
+    if (!window.confirm('Hapus laporan guru ini secara permanen?')) return;
     try {
       await deleteDoc(doc(db, 'reports', id));
       setReports((r) => r.filter((x) => x.id !== id));
@@ -71,7 +81,7 @@ export default function HistoryPage() {
   const formatDate = (s: string) =>
     new Date(s).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  if (loading || !user) {
+  if (loading || !user || userData?.role !== 'admin') {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen bg-base-200">
         <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -83,19 +93,22 @@ export default function HistoryPage() {
     <div className="flex-1 flex flex-col min-h-screen bg-base-200">
       <div className="navbar bg-base-100 shadow-sm sticky top-0 z-40 border-b border-base-200">
         <div className="flex-none">
-          <Link href="/home" className="btn btn-square btn-ghost">
+          <Link href="/admin" className="btn btn-square btn-ghost">
             <ChevronLeft size={24} />
           </Link>
         </div>
         <div className="flex-1">
-          <h1 className="text-lg font-bold">Riwayat Laporan</h1>
+          <h1 className="text-lg font-bold">Rekap Laporan</h1>
         </div>
       </div>
 
       <div className="main-content px-5 pt-5 pb-6">
-        <Link href="/report/create" className="btn btn-primary text-white w-full shadow-lg shadow-primary/30 mb-5 text-[15px]">
-          <Plus size={20} /> Tambah Data Laporan
-        </Link>
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30 mb-3">
+            <BarChart3 size={28} className="text-white" />
+          </div>
+          <p className="text-sm text-base-content/60 text-center mt-1">Pantau semua laporan harian guru</p>
+        </div>
         
         <div className="flex gap-2 mb-4 items-center bg-base-100 p-2 rounded-xl shadow-sm border border-base-200">
           <Filter size={18} className="text-base-content/50 ml-2" />
@@ -114,42 +127,41 @@ export default function HistoryPage() {
             {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
+
         {fetching ? (
           <div className="flex justify-center mt-16">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
         ) : reports.length === 0 ? (
-          <div className="flex flex-col items-center text-center mt-20 px-6 animate-fade-in">
+          <div className="flex flex-col items-center text-center mt-16 px-6 animate-fade-in">
             <div className="w-20 h-20 rounded-3xl bg-base-100 flex items-center justify-center mb-4 shadow-sm border border-base-200">
               <CalendarX2 size={32} className="text-base-content/30" />
             </div>
-            <h2 className="font-bold text-base-content text-lg">Belum ada laporan</h2>
-            <p className="text-sm text-base-content/60 mt-2 leading-relaxed">Mulai catat kegiatan mengajar Anda hari ini.</p>
-            <Link href="/report/create" className="btn btn-primary text-white mt-6 px-6 shadow-lg shadow-primary/30">
-              Isi Laporan Sekarang
-            </Link>
+            <h2 className="font-bold text-base-content text-lg">Belum ada data</h2>
+            <p className="text-sm text-base-content/60 mt-2 leading-relaxed">Tidak ada guru yang mengirim laporan pada periode ini.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3 animate-fade-in">
+            <div className="badge badge-primary badge-outline mb-2 self-end">{reports.length} Laporan</div>
             {reports.map((r) => {
               const open = expandedId === r.id;
               return (
                 <div
                   key={r.id}
                   className={`collapse collapse-arrow bg-base-100 border transition-all duration-200 ${
-                    open ? 'collapse-open border-primary/40 shadow-md' : 'collapse-close border-base-200/60 shadow-sm hover:border-base-300'
+                    open ? 'collapse-open border-violet-500/40 shadow-md' : 'collapse-close border-base-200/60 shadow-sm hover:border-base-300'
                   }`}
                 >
                   <div 
                     className="collapse-title flex items-center gap-3 p-4 pr-12 min-h-0 cursor-pointer"
                     onClick={() => setExpandedId(open ? null : r.id)}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <FileText size={18} className="text-primary" />
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+                      <FileText size={18} className="text-violet-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-primary">{formatDate(r.report_date)}</p>
-                      <p className="text-sm font-semibold text-base-content mt-0.5 line-clamp-2 leading-snug">{r.activity}</p>
+                      <p className="text-xs font-bold text-violet-600 mb-0.5">{r.user_name || 'Guru'}</p>
+                      <p className="text-[11px] text-base-content/60">{formatDate(r.report_date)}</p>
                     </div>
                   </div>
 
@@ -167,17 +179,11 @@ export default function HistoryPage() {
                         </div>
                       )}
                       <div className="flex gap-2 pt-3 border-t border-base-200/50">
-                        <Link
-                          href={`/report/edit/${r.id}`}
-                          className="btn btn-sm btn-ghost text-primary hover:bg-primary/10 flex-1"
-                        >
-                          <Pencil size={14} /> Edit
-                        </Link>
                         <button
                           onClick={(e) => handleDelete(r.id, e)}
-                          className="btn btn-sm btn-ghost text-error hover:bg-error/10 flex-1"
+                          className="btn btn-sm btn-outline border-error text-error hover:bg-error hover:text-white hover:border-error flex-1"
                         >
-                          <Trash2 size={14} /> Hapus
+                          <Trash2 size={14} /> Hapus Laporan
                         </button>
                       </div>
                     </div>

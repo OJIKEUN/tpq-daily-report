@@ -109,7 +109,7 @@ export default function ProfilePage() {
                   <span className="label-text font-semibold">Nama Lengkap</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
                     <User size={18} />
                   </div>
                   <input type="text" className="input input-bordered w-full pl-10 focus:input-primary" placeholder="Ust. Ahmad Fauzi" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -120,7 +120,7 @@ export default function ProfilePage() {
                   <span className="label-text font-semibold">Alamat</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
                     <MapPin size={18} />
                   </div>
                   <input type="text" className="input input-bordered w-full pl-10 focus:input-primary" placeholder="Merlion Square, No. 10" value={address} onChange={(e) => setAddress(e.target.value)} required />
@@ -131,7 +131,7 @@ export default function ProfilePage() {
                   <span className="label-text font-semibold">Nomor HP / WhatsApp</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
                     <Phone size={18} />
                   </div>
                   <input type="tel" className="input input-bordered w-full pl-10 focus:input-primary" placeholder="0812-3456-7890" value={phone} onChange={(e) => setPhone(e.target.value)} required />
@@ -148,7 +148,7 @@ export default function ProfilePage() {
                   <span className="label-text font-semibold">Nama Kepala TPQ</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
                     <School size={18} />
                   </div>
                   <input type="text" className="input input-bordered w-full pl-10 focus:input-primary" placeholder="Nama Kepala TPQ" value={headmasterName} onChange={(e) => setHeadmasterName(e.target.value)} required />
@@ -159,7 +159,7 @@ export default function ProfilePage() {
                   <span className="label-text font-semibold">Guru TPQ Pembimbing</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
                     <Users size={18} />
                   </div>
                   <input type="text" className="input input-bordered w-full pl-10 focus:input-primary" placeholder="Nama Guru Pembimbing" value={supervisorName} onChange={(e) => setSupervisorName(e.target.value)} required />
