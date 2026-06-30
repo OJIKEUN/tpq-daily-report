@@ -33,6 +33,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" data-theme="emerald">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.onerror = function(message, source, lineno, colno, error) {
+                alert("JS Error: " + message);
+              };
+              window.addEventListener('unhandledrejection', function(event) {
+                alert("Promise Error: " + (event.reason ? event.reason.message : 'Unknown'));
+              });
+            `,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <div className="app-container">
