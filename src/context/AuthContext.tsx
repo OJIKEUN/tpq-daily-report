@@ -29,10 +29,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      console.error("Firebase auth is undefined. Initialization failed.");
+      setLoading(false);
+      return;
+    }
+
+    // Failsafe timeout in case onAuthStateChanged hangs
+    const failsafeTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn("Auth initialization timed out. Forcing load to finish.");
+        setLoading(false);
+      }
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(failsafeTimeout);
       setUser(firebaseUser);
       
-      if (firebaseUser) {
+      if (firebaseUser && db) {
         // Fetch user role and name from Firestore
         try {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -59,7 +74,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(failsafeTimeout);
+      unsubscribe();
+    };
   }, []);
 
   return (
