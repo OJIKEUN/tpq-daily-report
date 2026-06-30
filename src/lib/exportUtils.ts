@@ -134,17 +134,17 @@ export const generateExcel = async (
   
   worksheet.getCell('B14').value = 'NAMA';
   worksheet.getCell('B14').font = dataDiriFont;
-  worksheet.getCell('D14').value = `: ${userProfile.name.toUpperCase()}`;
+  worksheet.getCell('D14').value = `: ${userProfile.name?.toUpperCase() || ''}`;
   worksheet.getCell('D14').font = dataDiriFont;
   
   worksheet.getCell('B15').value = 'ALAMAT';
   worksheet.getCell('B15').font = dataDiriFont;
-  worksheet.getCell('D15').value = `: ${userProfile.address.toUpperCase()}`;
+  worksheet.getCell('D15').value = `: ${userProfile.address?.toUpperCase() || ''}`;
   worksheet.getCell('D15').font = dataDiriFont;
   
   worksheet.getCell('B16').value = 'NO. HP';
   worksheet.getCell('B16').font = dataDiriFont;
-  worksheet.getCell('D16').value = `: ${userProfile.phone}`;
+  worksheet.getCell('D16').value = `: ${userProfile.phone || ''}`;
   worksheet.getCell('D16').font = dataDiriFont;
 
   // Table Headers (Row 18)
@@ -264,21 +264,21 @@ export const generateExcel = async (
   // Name Kepala TPQ (Left)
   worksheet.mergeCells(`B${currentRow}:D${currentRow}`);
   const headmasterCell = worksheet.getCell(`B${currentRow}`);
-  headmasterCell.value = userProfile.headmaster_name.toUpperCase();
+  headmasterCell.value = userProfile.headmaster_name?.toUpperCase() || '';
   headmasterCell.font = footerFontBold;
   headmasterCell.alignment = { horizontal: 'left' };
   
   // Name Guru (Right)
   worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
   const supervisorCell = worksheet.getCell(`E${currentRow}`);
-  supervisorCell.value = userProfile.supervisor_name.toUpperCase();
+  supervisorCell.value = userProfile.supervisor_name?.toUpperCase() || '';
   supervisorCell.font = footerFontBold;
   supervisorCell.alignment = { horizontal: 'left' };
 
   // Generate File
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  saveAs(blob, `Laporan_${userProfile.name}_${MONTHS[month-1]}_${year}.xlsx`);
+  saveAs(blob, `Laporan_${userProfile.name || 'Guru'}_${MONTHS[month-1]}_${year}.xlsx`);
 };
 
 export const generatePDF = async (
@@ -340,13 +340,13 @@ export const generatePDF = async (
   doc.setFontSize(11);
   doc.setFont('times', 'bold');
   doc.text('NAMA', 20, 80);
-  doc.text(`: ${userProfile.name.toUpperCase()}`, 50, 80);
+  doc.text(`: ${userProfile.name?.toUpperCase() || ''}`, 50, 80);
   
   doc.text('ALAMAT', 20, 86);
-  doc.text(`: ${userProfile.address.toUpperCase()}`, 50, 86);
+  doc.text(`: ${userProfile.address?.toUpperCase() || ''}`, 50, 86);
   
   doc.text('NO. HP', 20, 92);
-  doc.text(`: ${userProfile.phone}`, 50, 92);
+  doc.text(`: ${userProfile.phone || ''}`, 50, 92);
 
   // Table Data Preparation
   const tableData = reports.map((report, index) => {
@@ -399,8 +399,8 @@ export const generatePDF = async (
   doc.setFont('times', 'bold');
   
   // Name signatures (increased spacing)
-  doc.text(userProfile.headmaster_name.toUpperCase(), 20, finalY + 30, { align: 'left' });
-  doc.text(userProfile.supervisor_name.toUpperCase(), 130, finalY + 30, { align: 'left' });
+  doc.text(userProfile.headmaster_name?.toUpperCase() || '', 20, finalY + 30, { align: 'left' });
+  doc.text(userProfile.supervisor_name?.toUpperCase() || '', 130, finalY + 30, { align: 'left' });
 
-  doc.save(`Laporan_${userProfile.name}_${MONTHS[month-1]}_${year}.pdf`);
+  doc.save(`Laporan_${userProfile.name || 'Guru'}_${MONTHS[month-1]}_${year}.pdf`);
 };

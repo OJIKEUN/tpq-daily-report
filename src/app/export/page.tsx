@@ -54,7 +54,9 @@ export default function ExportPage() {
       if (!reports.length) { alert('Tidak ada laporan pada periode ini.'); setIsExporting(false); return; }
       if (format === 'excel') await generateExcel(m, selectedYear, profile, reports);
       else await generatePDF(m, selectedYear, profile, reports);
-    } catch { alert('Terjadi kesalahan saat export.'); }
+    } catch (error: any) { 
+      alert('Terjadi kesalahan saat export: ' + (error?.message || String(error))); 
+    }
     finally { setIsExporting(false); }
   };
 
