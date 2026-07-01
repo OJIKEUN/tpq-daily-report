@@ -84,7 +84,7 @@ export default function LoginPage() {
                   <span className="label-text font-semibold">Email / Username</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40 z-10">
                     <Mail size={18} />
                   </div>
                   <input
@@ -103,7 +103,7 @@ export default function LoginPage() {
                   <span className="label-text font-semibold">Password</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/40 z-10">
                     <Lock size={18} />
                   </div>
                   <input
