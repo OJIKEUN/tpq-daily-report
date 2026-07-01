@@ -16,6 +16,9 @@ export default function ProfilePage() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [noSk, setNoSk] = useState('');
+  const [noKtp, setNoKtp] = useState('');
+  const [noRek, setNoRek] = useState('');
   const [headmasterName, setHeadmasterName] = useState('');
   const [supervisorName, setSupervisorName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +33,9 @@ export default function ProfilePage() {
           setName(data.name || '');
           setAddress(data.address || '');
           setPhone(data.phone || '');
+          setNoSk(data.no_sk || '');
+          setNoKtp(data.no_ktp || '');
+          setNoRek(data.no_rek || '');
           setHeadmasterName(data.headmaster_name || '');
           setSupervisorName(data.supervisor_name || '');
         } else if (userData?.name) {
@@ -47,7 +53,7 @@ export default function ProfilePage() {
     try {
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid, role: userData?.role || 'guru',
-        name, address, phone, headmaster_name: headmasterName, supervisor_name: supervisorName,
+        name, address, phone, no_sk: noSk, no_ktp: noKtp, no_rek: noRek, headmaster_name: headmasterName, supervisor_name: supervisorName,
         updated_at: new Date().toISOString(),
       }, { merge: true });
       setMessage('Profil berhasil diperbarui!');
@@ -126,7 +132,7 @@ export default function ProfilePage() {
                   <input type="text" className="input input-bordered w-full pl-10 focus:input-primary" placeholder="Merlion Square, No. 10" value={address} onChange={(e) => setAddress(e.target.value)} required />
                 </div>
               </div>
-              <div className="form-control">
+              <div className="form-control mb-4">
                 <label className="label py-1">
                   <span className="label-text font-semibold">Nomor HP / WhatsApp</span>
                 </label>
@@ -136,6 +142,30 @@ export default function ProfilePage() {
                   </div>
                   <input type="tel" className="input input-bordered w-full pl-10 focus:input-primary" placeholder="0812-3456-7890" value={phone} onChange={(e) => setPhone(e.target.value)} required />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-3 px-1">Data Insentif (Opsional)</p>
+          <div className="card bg-base-100 shadow-sm border border-base-200 mb-6">
+            <div className="card-body p-5">
+              <div className="form-control mb-4">
+                <label className="label py-1">
+                  <span className="label-text font-semibold">Nomor SK</span>
+                </label>
+                <input type="text" className="input input-bordered w-full focus:input-primary" placeholder="01/SKG/TPQ DARUTTAUBAH/I/2026" value={noSk} onChange={(e) => setNoSk(e.target.value)} />
+              </div>
+              <div className="form-control mb-4">
+                <label className="label py-1">
+                  <span className="label-text font-semibold">Nomor KTP</span>
+                </label>
+                <input type="text" className="input input-bordered w-full focus:input-primary" placeholder="217112..." value={noKtp} onChange={(e) => setNoKtp(e.target.value)} />
+              </div>
+              <div className="form-control mb-4">
+                <label className="label py-1">
+                  <span className="label-text font-semibold">Nomor Rekening</span>
+                </label>
+                <input type="text" className="input input-bordered w-full focus:input-primary" placeholder="106213..." value={noRek} onChange={(e) => setNoRek(e.target.value)} />
               </div>
             </div>
           </div>

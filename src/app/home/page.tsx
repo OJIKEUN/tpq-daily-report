@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
 import Link from 'next/link';
-import { PenLine, History, User, Download, ChevronRight } from 'lucide-react';
+import { PenLine, History, User, Download, ChevronRight, FileText } from 'lucide-react';
 
 export default function HomePage() {
   const { user, userData, loading } = useAuth();
@@ -64,6 +64,7 @@ export default function HomePage() {
             {[
               { href: '/history', icon: History, label: 'Riwayat', subtitle: 'Lihat semua catatan', bgClass: 'bg-blue-500' },
               { href: '/profile', icon: User, label: 'Profil Saya', subtitle: 'Data diri & kop', bgClass: 'bg-orange-500' },
+              { href: '/insentif', icon: FileText, label: 'Surat Insentif', subtitle: 'Pencairan insentif', bgClass: 'bg-emerald-500' },
               { href: '/export', icon: Download, label: 'Export Laporan', subtitle: 'Unduh Excel/PDF', bgClass: 'bg-violet-500' },
             ].map(({ href, icon: Icon, label, subtitle, bgClass }) => (
               <Link key={href} href={href} className="card bg-base-100 shadow-sm hover:shadow-md border border-base-200 active:scale-[0.97] transition-all duration-200">
