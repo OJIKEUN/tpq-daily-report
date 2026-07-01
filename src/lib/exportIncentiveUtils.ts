@@ -91,22 +91,23 @@ export const generateIncentiveExcel = async (data: IncentiveLetterData) => {
 
   // METADATA
   const metaFont = { name: 'Times New Roman', size: 11 };
+  const metaFontBold = { name: 'Times New Roman', size: 11, bold: true };
   let row = 9;
   
   worksheet.getCell(`B${row}`).value = 'Nomor';
-  worksheet.getCell(`B${row}`).font = metaFont;
+  worksheet.getCell(`B${row}`).font = metaFontBold;
   worksheet.getCell(`C${row}`).value = `: ${data.nomor}`;
   worksheet.getCell(`C${row}`).font = metaFont;
   
   row++;
   worksheet.getCell(`B${row}`).value = 'Lampiran';
-  worksheet.getCell(`B${row}`).font = metaFont;
+  worksheet.getCell(`B${row}`).font = metaFontBold;
   worksheet.getCell(`C${row}`).value = `: ${data.lampiran}`;
   worksheet.getCell(`C${row}`).font = metaFont;
   
   row++;
   worksheet.getCell(`B${row}`).value = 'Hal';
-  worksheet.getCell(`B${row}`).font = metaFont;
+  worksheet.getCell(`B${row}`).font = metaFontBold;
   worksheet.getCell(`C${row}`).value = `: ${data.perihal}`;
   worksheet.getCell(`C${row}`).font = metaFont;
 
@@ -237,10 +238,20 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
 
   // METADATA
   doc.setFontSize(12);
+  doc.setFont('times', 'bold');
+  doc.text('Nomor', 20, 58); 
   doc.setFont('times', 'normal');
-  doc.text('Nomor', 20, 58); doc.text(`: ${data.nomor}`, 45, 58);
-  doc.text('Lampiran', 20, 64); doc.text(`: ${data.lampiran}`, 45, 64);
-  doc.text('Hal', 20, 70); doc.text(`: ${data.perihal}`, 45, 70);
+  doc.text(`: ${data.nomor}`, 45, 58);
+  
+  doc.setFont('times', 'bold');
+  doc.text('Lampiran', 20, 64); 
+  doc.setFont('times', 'normal');
+  doc.text(`: ${data.lampiran}`, 45, 64);
+  
+  doc.setFont('times', 'bold');
+  doc.text('Hal', 20, 70); 
+  doc.setFont('times', 'normal');
+  doc.text(`: ${data.perihal}`, 45, 70);
 
   doc.text('Kepada Yth.', 20, 85);
   doc.setFont('times', 'bold');
@@ -256,7 +267,7 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
   const splitText = doc.splitTextToSize(textBody, 170);
   doc.text(splitText, 20, 122);
 
-  const startY = 125 + (splitText.length * 6);
+  const startY = 122 + (splitText.length * 5) + 3; // Closer to text
 
   const tableData = data.teachers.map((t, index) => [
     index + 1,
@@ -268,6 +279,7 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
 
   autoTable(doc, {
     startY: startY,
+    margin: { left: 20, right: 20 },
     head: [['NO', 'NAMA', 'NO SK', 'NO KTP', 'NO. REK']],
     body: tableData,
     theme: 'grid',
@@ -279,10 +291,10 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
       3: { halign: 'left', cellWidth: 40 },
       4: { halign: 'left', cellWidth: 35 }
     },
-    styles: { font: 'times', fontSize: 11, cellPadding: 2, lineWidth: 0.1, lineColor: 0, valign: 'middle' }
+    styles: { font: 'times', fontSize: 11, cellPadding: 1.5, lineWidth: 0.1, lineColor: 0, valign: 'middle' }
   });
 
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  const finalY = (doc as any).lastAutoTable.finalY + 8;
 
   const closingText = `Demikianlah permohonan ini kami sampaikan untuk dapat dipergunakan sebagaimana mestinya. Atas perhatiannya kami ucapkan terima kasih.`;
   const splitClosing = doc.splitTextToSize(closingText, 170);
