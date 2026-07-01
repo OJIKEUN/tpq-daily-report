@@ -220,16 +220,16 @@ export default function GlobalReportsPage() {
             <button 
               onClick={() => handleExport('pdf')} 
               disabled={exporting}
-              className="btn btn-error text-white flex-1 shadow-lg shadow-error/30"
+              className="btn flex-1 bg-red-500 hover:bg-red-600 text-white border-none shadow-lg shadow-red-500/30"
             >
-              {exporting ? <span className="loading loading-spinner loading-sm"></span> : <><Download size={18} /> Export PDF</>}
+              {exporting ? <span className="loading loading-spinner loading-sm text-white"></span> : <><Download size={18} /> Export PDF</>}
             </button>
             <button 
               onClick={() => handleExport('excel')} 
               disabled={exporting}
-              className="btn btn-success text-white flex-1 shadow-lg shadow-success/30"
+              className="btn flex-1 bg-green-500 hover:bg-green-600 text-white border-none shadow-lg shadow-green-500/30"
             >
-              {exporting ? <span className="loading loading-spinner loading-sm"></span> : <><Download size={18} /> Export Excel</>}
+              {exporting ? <span className="loading loading-spinner loading-sm text-white"></span> : <><Download size={18} /> Export Excel</>}
             </button>
           </div>
         )}
