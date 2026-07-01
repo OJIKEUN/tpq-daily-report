@@ -301,7 +301,7 @@ export default function EditInsentifPage() {
                 </div>
               ))}
               
-              <button type="button" onClick={addTeacherRow} className="btn btn-outline btn-primary w-full border-dashed border-2">
+              <button type="button" onClick={addTeacherRow} className="btn bg-white hover:bg-emerald-50 text-emerald-600 border-emerald-500 border-dashed border-2 w-full">
                 <Plus size={18} /> Tambah Guru Lainnya
               </button>
             </div>
@@ -324,8 +324,8 @@ export default function EditInsentifPage() {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary w-full text-white shadow-lg shadow-primary/30 h-12 mb-10" disabled={isSubmitting}>
-            {isSubmitting ? <span className="loading loading-spinner"></span> : <><Save size={20} /> Simpan Perubahan</>}
+          <button type="submit" className="btn bg-emerald-500 hover:bg-emerald-600 border-none w-full text-white shadow-lg shadow-emerald-500/30 h-12 mb-10" disabled={isSubmitting}>
+            {isSubmitting ? <span className="loading loading-spinner text-white"></span> : <><Save size={20} /> Simpan Perubahan</>}
           </button>
 
         </form>
