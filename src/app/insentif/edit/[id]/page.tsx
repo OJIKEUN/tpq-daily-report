@@ -308,7 +308,7 @@ export default function EditInsentifPage() {
           </div>
 
           {/* Pengesahan */}
-          <div>
+          <div className="mb-6">
             <p className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-3 px-1">Pengesahan</p>
             <div className="card bg-base-100 shadow-sm border border-base-200">
               <div className="card-body p-5 flex flex-col gap-4">
@@ -324,13 +324,11 @@ export default function EditInsentifPage() {
             </div>
           </div>
 
-        </form>
-      </div>
+          <button type="submit" className="btn btn-primary w-full text-white shadow-lg shadow-primary/30 h-12 mb-10" disabled={isSubmitting}>
+            {isSubmitting ? <span className="loading loading-spinner"></span> : <><Save size={20} /> Simpan Perubahan</>}
+          </button>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-base-100 border-t border-base-200 z-50">
-        <button onClick={handleSubmit} className="btn btn-primary w-full text-white shadow-lg shadow-primary/30" disabled={isSubmitting}>
-          {isSubmitting ? <span className="loading loading-spinner"></span> : <><Save size={20} /> Simpan Perubahan</>}
-        </button>
+        </form>
       </div>
     </div>
   );
