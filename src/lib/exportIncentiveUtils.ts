@@ -288,7 +288,7 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
       3: { halign: 'left', cellWidth: 40 },
       4: { halign: 'left', cellWidth: 35 }
     },
-    styles: { font: 'times', fontSize: 9, cellPadding: 1.5, lineWidth: 0.1, lineColor: 0, valign: 'middle' }
+    styles: { font: 'times', fontSize: 9, textColor: 0, cellPadding: 1.5, lineWidth: 0.1, lineColor: 0, valign: 'middle' }
   });
 
   const finalY = (doc as any).lastAutoTable.finalY + 8;
