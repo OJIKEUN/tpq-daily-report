@@ -26,4 +26,6 @@ try {
   firebaseInitError = error;
 }
 
-export { app, auth, db, firebaseInitError };
+const castedAuth = auth as Auth;
+const castedDb = db as Firestore;
+export { app, castedAuth as auth, castedDb as db, firebaseInitError };

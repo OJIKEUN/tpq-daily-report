@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Users, BarChart3, ShieldCheck } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
+import Link from 'next/link';
 
 export default function AdminPage() {
   const { user, userData, loading } = useAuth();
