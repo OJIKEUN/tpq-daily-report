@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   },
 }
 
+import PwaRegister from '@/components/PwaRegister'
+
 export default function RootLayout({
   children,
 }: {
@@ -52,6 +54,7 @@ export default function RootLayout({
           <div className="app-container">
             {children}
           </div>
+          <PwaRegister />
         </AuthProvider>
       </body>
     </html>
