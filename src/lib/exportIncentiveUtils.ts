@@ -146,7 +146,7 @@ export const generateIncentiveExcel = async (data: IncentiveLetterData) => {
 
   [2, 3, 4, 5, 6].forEach((col) => {
     const cell = headerRow.getCell(col);
-    cell.font = { name: 'Times New Roman', size: 11, bold: true };
+    cell.font = { name: 'Times New Roman', size: 9, bold: true };
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
   });
@@ -163,7 +163,7 @@ export const generateIncentiveExcel = async (data: IncentiveLetterData) => {
 
     [2, 3, 4, 5, 6].forEach((col) => {
       const cell = tr.getCell(col);
-      cell.font = { name: 'Times New Roman', size: 11 };
+      cell.font = { name: 'Times New Roman', size: 9 };
       cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
       cell.alignment = { vertical: 'middle', horizontal: (col === 2) ? 'center' : 'left' };
     });
@@ -280,7 +280,7 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
     head: [['NO', 'NAMA', 'NO SK', 'NO KTP', 'NO. REK']],
     body: tableData,
     theme: 'grid',
-    headStyles: { fillColor: [240, 240, 240], textColor: 0, halign: 'center', font: 'times', fontSize: 11, lineWidth: 0.1, lineColor: 0 },
+    headStyles: { fillColor: [255, 255, 255], textColor: 0, halign: 'center', font: 'times', fontSize: 9, lineWidth: 0.1, lineColor: 0 },
     columnStyles: {
       0: { halign: 'center', cellWidth: 10 },
       1: { halign: 'left', cellWidth: 40 },
@@ -288,7 +288,7 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
       3: { halign: 'left', cellWidth: 40 },
       4: { halign: 'left', cellWidth: 35 }
     },
-    styles: { font: 'times', fontSize: 11, cellPadding: 1.5, lineWidth: 0.1, lineColor: 0, valign: 'middle' }
+    styles: { font: 'times', fontSize: 9, cellPadding: 1.5, lineWidth: 0.1, lineColor: 0, valign: 'middle' }
   });
 
   const finalY = (doc as any).lastAutoTable.finalY + 8;
