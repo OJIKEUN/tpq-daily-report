@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { collection, query, where, orderBy, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { FileText, CalendarX2, ChevronLeft, Filter, BarChart3, Trash2, User } from 'lucide-react';
+import { FileText, CalendarX2, ChevronLeft, Filter, BarChart3, Trash2, User, Download } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import { generateExcel, generatePDF, generateGlobalExcel, generateGlobalPDF } from '@/lib/exportUtils';
 
 const MONTHS = [
   'Januari','Februari','Maret','April','Mei','Juni',
@@ -16,22 +17,35 @@ const MONTHS = [
 
 interface Report {
   id: string;
+  user_id: string;
   user_name: string;
   report_date: string;
   activity: string;
   description: string;
 }
 
+interface Teacher {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  headmaster_name: string;
+  supervisor_name: string;
+}
+
 export default function GlobalReportsPage() {
   const { user, userData, loading } = useAuth();
   const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [fetching, setFetching] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('ALL');
   
   const YEARS = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
@@ -39,9 +53,24 @@ export default function GlobalReportsPage() {
     if (!loading && (!user || userData?.role !== 'admin')) {
       router.push('/');
     } else if (user && userData?.role === 'admin') {
+      fetchTeachers();
+    }
+  }, [user, userData, loading, router]);
+
+  useEffect(() => {
+    if (user && userData?.role === 'admin') {
       fetchReports();
     }
-  }, [user, userData, loading, router, selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, selectedTeacherId, user, userData]);
+
+  const fetchTeachers = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'guru')));
+      const list: Teacher[] = [];
+      snap.forEach((d) => list.push({ id: d.id, ...d.data() } as Teacher));
+      setTeachers(list);
+    } catch (e) { console.error("Error fetching teachers", e); }
+  };
 
   const fetchReports = async () => {
     setFetching(true);
@@ -51,14 +80,25 @@ export default function GlobalReportsPage() {
     const end = `${selectedYear}-${String(m).padStart(2,'0')}-${last}`;
 
     try {
-      const snap = await getDocs(
-        query(
-          collection(db, 'reports'), 
+      let q = query(
+        collection(db, 'reports'), 
+        where('report_date', '>=', start),
+        where('report_date', '<=', end),
+        orderBy('report_date', 'desc')
+      );
+
+      if (selectedTeacherId !== 'ALL') {
+        // Query by specific teacher
+        q = query(
+          collection(db, 'reports'),
+          where('user_id', '==', selectedTeacherId),
           where('report_date', '>=', start),
           where('report_date', '<=', end),
           orderBy('report_date', 'desc')
-        )
-      );
+        );
+      }
+
+      const snap = await getDocs(q);
       const list: Report[] = [];
       snap.forEach((d) => list.push({ id: d.id, ...d.data() } as Report));
       setReports(list);
@@ -76,6 +116,37 @@ export default function GlobalReportsPage() {
       await deleteDoc(doc(db, 'reports', id));
       setReports((r) => r.filter((x) => x.id !== id));
     } catch { alert('Gagal menghapus.'); }
+  };
+
+  const handleExport = async (type: 'pdf' | 'excel') => {
+    if (reports.length === 0) {
+      alert('Tidak ada data untuk diexport pada bulan ini.');
+      return;
+    }
+    setExporting(true);
+    try {
+      if (selectedTeacherId === 'ALL') {
+        const headmasterName = userData?.name || 'Sugiarti'; 
+        if (type === 'excel') {
+          await generateGlobalExcel(selectedMonth + 1, selectedYear, headmasterName, reports);
+        } else {
+          await generateGlobalPDF(selectedMonth + 1, selectedYear, headmasterName, reports);
+        }
+      } else {
+        const teacher = teachers.find(t => t.id === selectedTeacherId);
+        if (!teacher) throw new Error('Data guru tidak ditemukan');
+        if (type === 'excel') {
+          await generateExcel(selectedMonth + 1, selectedYear, teacher, reports);
+        } else {
+          await generatePDF(selectedMonth + 1, selectedYear, teacher, reports);
+        }
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Gagal mengekspor laporan.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const formatDate = (s: string) =>
@@ -107,26 +178,61 @@ export default function GlobalReportsPage() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30 mb-3">
             <BarChart3 size={28} className="text-white" />
           </div>
-          <p className="text-sm text-base-content/60 text-center mt-1">Pantau semua laporan harian guru</p>
+          <p className="text-sm text-base-content/60 text-center mt-1">Pantau & Export Laporan Guru</p>
         </div>
         
-        <div className="flex gap-2 mb-4 items-center bg-base-100 p-2 rounded-xl shadow-sm border border-base-200">
-          <Filter size={18} className="text-base-content/50 ml-2" />
-          <select 
-            className="select select-ghost select-sm flex-1 focus:bg-base-200"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-          >
-            {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-          </select>
-          <select 
-            className="select select-ghost select-sm flex-1 focus:bg-base-200 border-l border-base-200 rounded-none"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-          >
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="flex gap-2 items-center bg-base-100 p-2 rounded-xl shadow-sm border border-base-200">
+            <User size={18} className="text-base-content/50 ml-2" />
+            <select 
+              className="select select-ghost select-sm flex-1 focus:bg-base-200"
+              value={selectedTeacherId}
+              onChange={(e) => setSelectedTeacherId(e.target.value)}
+            >
+              <option value="ALL">-- Semua Guru --</option>
+              {teachers.map(t => (
+                <option key={t.id} value={t.id}>{t.name || 'Guru Tanpa Nama'}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-2 items-center bg-base-100 p-2 rounded-xl shadow-sm border border-base-200">
+            <Filter size={18} className="text-base-content/50 ml-2" />
+            <select 
+              className="select select-ghost select-sm flex-1 focus:bg-base-200"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            >
+              {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+            <select 
+              className="select select-ghost select-sm flex-1 focus:bg-base-200 border-l border-base-200 rounded-none"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
+
+        {reports.length > 0 && (
+          <div className="flex gap-3 mb-5 mt-2 animate-fade-in">
+            <button 
+              onClick={() => handleExport('pdf')} 
+              disabled={exporting}
+              className="btn btn-error text-white flex-1 shadow-lg shadow-error/30"
+            >
+              {exporting ? <span className="loading loading-spinner loading-sm"></span> : <><Download size={18} /> Export PDF</>}
+            </button>
+            <button 
+              onClick={() => handleExport('excel')} 
+              disabled={exporting}
+              className="btn btn-success text-white flex-1 shadow-lg shadow-success/30"
+            >
+              {exporting ? <span className="loading loading-spinner loading-sm"></span> : <><Download size={18} /> Export Excel</>}
+            </button>
+          </div>
+        )}
 
         {fetching ? (
           <div className="flex justify-center mt-16">
@@ -138,7 +244,7 @@ export default function GlobalReportsPage() {
               <CalendarX2 size={32} className="text-base-content/30" />
             </div>
             <h2 className="font-bold text-base-content text-lg">Belum ada data</h2>
-            <p className="text-sm text-base-content/60 mt-2 leading-relaxed">Tidak ada guru yang mengirim laporan pada periode ini.</p>
+            <p className="text-sm text-base-content/60 mt-2 leading-relaxed">Tidak ada laporan pada periode ini.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3 animate-fade-in">
