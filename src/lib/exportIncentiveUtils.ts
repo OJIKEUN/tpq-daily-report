@@ -97,19 +97,19 @@ export const generateIncentiveExcel = async (data: IncentiveLetterData) => {
   worksheet.getCell(`B${row}`).value = 'Nomor';
   worksheet.getCell(`B${row}`).font = metaFontBold;
   worksheet.getCell(`C${row}`).value = `: ${data.nomor}`;
-  worksheet.getCell(`C${row}`).font = metaFont;
+  worksheet.getCell(`C${row}`).font = metaFontBold;
   
   row++;
   worksheet.getCell(`B${row}`).value = 'Lampiran';
   worksheet.getCell(`B${row}`).font = metaFontBold;
   worksheet.getCell(`C${row}`).value = `: ${data.lampiran}`;
-  worksheet.getCell(`C${row}`).font = metaFont;
+  worksheet.getCell(`C${row}`).font = metaFontBold;
   
   row++;
   worksheet.getCell(`B${row}`).value = 'Hal';
   worksheet.getCell(`B${row}`).font = metaFontBold;
   worksheet.getCell(`C${row}`).value = `: ${data.perihal}`;
-  worksheet.getCell(`C${row}`).font = metaFont;
+  worksheet.getCell(`C${row}`).font = metaFontBold;
 
   row += 2;
   worksheet.getCell(`B${row}`).value = 'Kepada Yth.';
@@ -239,20 +239,17 @@ export const generateIncentivePDF = async (data: IncentiveLetterData) => {
   // METADATA
   doc.setFontSize(12);
   doc.setFont('times', 'bold');
+  
   doc.text('Nomor', 20, 58); 
-  doc.setFont('times', 'normal');
   doc.text(`: ${data.nomor}`, 45, 58);
   
-  doc.setFont('times', 'bold');
   doc.text('Lampiran', 20, 64); 
-  doc.setFont('times', 'normal');
   doc.text(`: ${data.lampiran}`, 45, 64);
   
-  doc.setFont('times', 'bold');
   doc.text('Hal', 20, 70); 
-  doc.setFont('times', 'normal');
   doc.text(`: ${data.perihal}`, 45, 70);
 
+  doc.setFont('times', 'normal');
   doc.text('Kepada Yth.', 20, 85);
   doc.setFont('times', 'bold');
   doc.text(data.kepada, 20, 91);
