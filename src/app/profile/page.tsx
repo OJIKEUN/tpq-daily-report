@@ -41,6 +41,9 @@ export default function ProfilePage() {
         } else if (userData?.name) {
           setName(userData.name);
         }
+      }).catch((err) => {
+        console.error("Gagal mengambil profil:", err);
+        setMessage("Akses ditolak: Aturan Firebase kedaluwarsa atau belum diatur.");
       });
     }
   }, [user, userData, loading, router]);
