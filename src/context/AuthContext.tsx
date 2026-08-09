@@ -54,7 +54,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const userDocSnap = await getDoc(userDocRef);
           
           if (userDocSnap.exists()) {
-            setUserData(userDocSnap.data() as UserData);
+            const data = userDocSnap.data() as UserData;
+            // Force superadmin role regardless of DB state
+            if (firebaseUser.email === 'superadmin@tpq.com') {
+              data.role = 'admin';
+            }
+            setUserData(data);
           } else {
             // Fallback if document doesn't exist yet
             // If it's the superadmin email, grant admin access temporarily
