@@ -18,10 +18,14 @@ import {
   Filter,
   HeartHandshake,
   X,
-  RotateCcw
+  RotateCcw,
+  Download,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import { generateSantriExcel, generateSantriPDF } from '@/lib/exportSantriUtils';
 
 export interface Santri {
   id: string;
@@ -65,6 +69,56 @@ export default function SantriListPage() {
   const [search, setSearch] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('Semua Kelas');
   const [selectedGender, setSelectedGender] = useState<'ALL' | 'L' | 'P'>('ALL');
+
+  // Export States
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportScope, setExportScope] = useState<'ALL' | 'FILTERED'>('ALL');
+  const [tanggalPengesahan, setTanggalPengesahan] = useState(new Date().toISOString().split('T')[0]);
+  const [penandaTangan, setPenandaTangan] = useState('Sugiarti');
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async (type: 'pdf' | 'excel') => {
+    const dataToExport = exportScope === 'FILTERED' ? filteredList : santriList;
+    if (dataToExport.length === 0) {
+      alert('Tidak ada data santri untuk diekspor.');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      let subtitle = 'Semua Tingkat / Kelas';
+      if (exportScope === 'FILTERED') {
+        const filters: string[] = [];
+        if (selectedGrade !== 'Semua Kelas') filters.push(selectedGrade);
+        if (selectedGender === 'L') filters.push('Santriwan');
+        if (selectedGender === 'P') filters.push('Santriwati');
+        if (search) filters.push(`Pencarian: "${search}"`);
+        subtitle = filters.length > 0 ? filters.join(' - ') : 'Data Terfilter';
+      }
+
+      if (type === 'pdf') {
+        await generateSantriPDF({
+          santriList: dataToExport,
+          tanggalPengesahan,
+          penandaTangan,
+          subtitle,
+        });
+      } else {
+        await generateSantriExcel({
+          santriList: dataToExport,
+          tanggalPengesahan,
+          penandaTangan,
+          subtitle,
+        });
+      }
+      setShowExportModal(false);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Gagal mengekspor data santri.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -192,13 +246,25 @@ export default function SantriListPage() {
           </div>
         </div>
 
-        {/* Tombol Tambah Santri */}
-        <Link
-          href="/santri/create"
-          className="btn btn-primary text-white w-full shadow-lg shadow-primary/30 mb-5 text-[15px]"
-        >
-          <UserPlus size={20} /> Tambah Santri Baru
-        </Link>
+        {/* Tombol Aksi: Tambah & Export */}
+        <div className="flex gap-2.5 mb-5">
+          <Link
+            href="/santri/create"
+            className="btn btn-primary text-white flex-1 shadow-md shadow-primary/30 text-[14px]"
+          >
+            <UserPlus size={18} /> Tambah Santri
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setExportScope((selectedGrade !== 'Semua Kelas' || selectedGender !== 'ALL' || search) ? 'FILTERED' : 'ALL');
+              setShowExportModal(true);
+            }}
+            className="btn bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 text-[14px] px-4 shrink-0 gap-1.5 border-none"
+          >
+            <Download size={18} /> Export
+          </button>
+        </div>
 
         {/* Filter & Search Card */}
         <div className="card bg-base-100 shadow-sm border border-base-200 mb-5 p-4 flex flex-col gap-3.5 animate-fade-in">
@@ -452,6 +518,146 @@ export default function SantriListPage() {
       </div>
 
       <BottomNav />
+
+      {/* EXPORT MODAL */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 animate-fade-in backdrop-blur-xs">
+          <div className="bg-base-100 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-fade-in-scale border border-base-200">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-base-200 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base sm:text-lg text-base-content">Export Data Santri</h3>
+                <p className="text-xs text-base-content/60 mt-0.5">Pilih format dokumen untuk diunduh</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                className="btn btn-ghost btn-circle btn-sm text-base-content/50"
+                disabled={exporting}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 flex flex-col gap-4 max-h-[75vh] overflow-y-auto">
+              {/* Cakupan Data */}
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                    Cakupan Data yang Diexport
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setExportScope('ALL')}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
+                      exportScope === 'ALL'
+                        ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                        : 'border-base-200 text-base-content/70 hover:bg-base-200/50'
+                    }`}
+                  >
+                    <span>Semua Santri</span>
+                    <span className="text-[10px] opacity-75 font-normal">({santriList.length} Santri)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setExportScope('FILTERED')}
+                    disabled={filteredList.length === santriList.length}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
+                      exportScope === 'FILTERED'
+                        ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                        : filteredList.length === santriList.length
+                        ? 'border-base-200 opacity-50 cursor-not-allowed text-base-content/40'
+                        : 'border-base-200 text-base-content/70 hover:bg-base-200/50'
+                    }`}
+                  >
+                    <span>Sesuai Filter</span>
+                    <span className="text-[10px] opacity-75 font-normal">({filteredList.length} Santri)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Tanggal Pengesahan */}
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-semibold text-xs text-base-content/70">
+                    Tanggal Surat / Pengesahan
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
+                  value={tanggalPengesahan}
+                  onChange={(e) => setTanggalPengesahan(e.target.value)}
+                  disabled={exporting}
+                />
+              </div>
+
+              {/* Nama Kepala TPQ (Penandatangan) */}
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-semibold text-xs text-base-content/70">
+                    Nama Penandatangan (Kepala TPQ)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
+                  value={penandaTangan}
+                  onChange={(e) => setPenandaTangan(e.target.value)}
+                  placeholder="Contoh: Sugiarti"
+                  disabled={exporting}
+                />
+              </div>
+
+              {/* Tombol Export */}
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleExport('pdf')}
+                  disabled={exporting}
+                  className="btn bg-red-600 hover:bg-red-700 text-white border-none w-full shadow-md shadow-red-600/25 h-11 text-sm font-semibold gap-2"
+                >
+                  {exporting ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : (
+                    <>
+                      <FileText size={18} /> Download Dokumen PDF
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExport('excel')}
+                  disabled={exporting}
+                  className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full shadow-md shadow-green-600/25 h-11 text-sm font-semibold gap-2"
+                >
+                  {exporting ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : (
+                    <>
+                      <FileSpreadsheet size={18} /> Download Berkas Excel
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowExportModal(false)}
+                  disabled={exporting}
+                  className="btn btn-ghost btn-sm w-full mt-1 text-base-content/60"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
