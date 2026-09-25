@@ -26,6 +26,7 @@ import {
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { generateSantriExcel, generateSantriPDF } from '@/lib/exportSantriUtils';
+import { useToast } from '@/context/ToastContext';
 
 export interface Santri {
   id: string;
@@ -60,6 +61,7 @@ const GRADE_OPTIONS = [
 
 export default function SantriListPage() {
   const { user, userData, loading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
 
   const [santriList, setSantriList] = useState<Santri[]>([]);
@@ -77,10 +79,14 @@ export default function SantriListPage() {
   const [penandaTangan, setPenandaTangan] = useState('Sugiarti');
   const [exporting, setExporting] = useState(false);
 
+  // Delete Confirmation States
+  const [santriToDelete, setSantriToDelete] = useState<Santri | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleExport = async (type: 'pdf' | 'excel') => {
     const dataToExport = exportScope === 'FILTERED' ? filteredList : santriList;
     if (dataToExport.length === 0) {
-      alert('Tidak ada data santri untuk diekspor.');
+      showToast('Tidak ada data santri untuk diekspor.', 'error');
       return;
     }
 
@@ -112,9 +118,10 @@ export default function SantriListPage() {
         });
       }
       setShowExportModal(false);
+      showToast(`Berhasil mengekspor dokumen ${type.toUpperCase()}`, 'success');
     } catch (error) {
       console.error('Export error:', error);
-      alert('Gagal mengekspor data santri.');
+      showToast('Gagal mengekspor data santri.', 'error');
     } finally {
       setExporting(false);
     }
@@ -141,7 +148,7 @@ export default function SantriListPage() {
       setFilteredList(list);
     } catch (error) {
       console.error('Error fetching students:', error);
-      alert('Gagal mengambil data santri.');
+      showToast('Gagal mengambil data santri.', 'error');
     } finally {
       setFetching(false);
     }
@@ -166,19 +173,20 @@ export default function SantriListPage() {
     setFilteredList(result);
   }, [search, selectedGrade, selectedGender, santriList]);
 
-  const handleDelete = async (s: Santri) => {
-    const confirmMessage = `Apakah Anda yakin ingin menghapus data santri "${s.name}"?\nData yang dihapus tidak dapat dikembalikan.`;
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!santriToDelete) return;
 
+    setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'students', s.id));
-      setSantriList((prev) => prev.filter((item) => item.id !== s.id));
-      alert(`Data santri "${s.name}" berhasil dihapus.`);
+      await deleteDoc(doc(db, 'students', santriToDelete.id));
+      setSantriList((prev) => prev.filter((item) => item.id !== santriToDelete.id));
+      showToast(`Data santri "${santriToDelete.name}" berhasil dihapus.`, 'success');
+      setSantriToDelete(null);
     } catch (error) {
       console.error('Error deleting student:', error);
-      alert('Gagal menghapus data santri.');
+      showToast('Gagal menghapus data santri.', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -503,7 +511,7 @@ export default function SantriListPage() {
                         <Pencil size={14} /> Edit
                       </Link>
                       <button
-                        onClick={() => handleDelete(s)}
+                        onClick={() => setSantriToDelete(s)}
                         className="btn btn-sm btn-ghost text-error hover:bg-error/10 flex-1 gap-1.5"
                       >
                         <Trash2 size={14} /> Hapus
@@ -654,6 +662,44 @@ export default function SantriListPage() {
                   Batal
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* DELETE CONFIRMATION MODAL */}
+      {santriToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 animate-fade-in backdrop-blur-xs">
+          <div className="bg-base-100 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden border border-base-200 animate-fade-in-scale p-5">
+            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto mb-3">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="font-bold text-base sm:text-lg text-base-content text-center">
+              Hapus Data Santri?
+            </h3>
+            <p className="text-xs sm:text-sm text-base-content/70 text-center mt-1.5 leading-relaxed">
+              Apakah Anda yakin ingin menghapus data santri <strong className="text-base-content font-bold">"{santriToDelete.name}"</strong>? Data yang dihapus tidak dapat dikembalikan.
+            </p>
+            <div className="grid grid-cols-2 gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setSantriToDelete(null)}
+                disabled={isDeleting}
+                className="btn btn-ghost btn-sm h-10 rounded-xl"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="btn btn-error btn-sm h-10 rounded-xl text-white font-semibold"
+              >
+                {isDeleting ? (
+                  <span className="loading loading-spinner loading-xs"></span>
+                ) : (
+                  'Ya, Hapus'
+                )}
+              </button>
             </div>
           </div>
         </div>

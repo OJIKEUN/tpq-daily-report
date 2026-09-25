@@ -7,9 +7,11 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Calendar, FileText, AlignLeft, Save, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/context/ToastContext';
 
 export default function EditReportPage() {
   const { user, loading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const params = useParams();
   const reportId = params.id as string;
@@ -32,14 +34,17 @@ export default function EditReportPage() {
             setActivity(d.activity);
             setDescription(d.description || '');
           } else {
-            alert('Laporan tidak ditemukan.');
+            showToast('Laporan tidak ditemukan.', 'error');
             router.push('/history');
           }
-        } catch { alert('Gagal mengambil data.'); }
-        finally { setFetching(false); }
+        } catch { 
+          showToast('Gagal mengambil data.', 'error'); 
+        } finally { 
+          setFetching(false); 
+        }
       })();
     }
-  }, [user, loading, reportId, router]);
+  }, [user, loading, reportId, router, showToast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,8 +54,12 @@ export default function EditReportPage() {
       await updateDoc(doc(db, 'reports', reportId), {
         report_date: date, activity, description, updated_at: new Date().toISOString(),
       });
+      showToast('Perubahan laporan berhasil disimpan!', 'success');
       router.push('/history');
-    } catch { alert('Gagal memperbarui.'); setIsSubmitting(false); }
+    } catch { 
+      showToast('Gagal memperbarui laporan.', 'error'); 
+      setIsSubmitting(false); 
+    }
   };
 
   if (fetching) {

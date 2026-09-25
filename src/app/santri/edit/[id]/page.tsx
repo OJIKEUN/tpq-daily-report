@@ -16,6 +16,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/context/ToastContext';
 
 const GRADE_OPTIONS = [
   'TK / PAUD / Belum Sekolah',
@@ -35,6 +36,7 @@ const GRADE_OPTIONS = [
 
 export default function EditSantriPage() {
   const { user, loading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const params = useParams();
   const santriId = params?.id as string;
@@ -74,12 +76,12 @@ export default function EditSantriPage() {
         setCreatedByName(d.created_by_name || 'Guru TPQ');
         setCreatedAt(d.created_at || '');
       } else {
-        alert('Data santri tidak ditemukan.');
+        showToast('Data santri tidak ditemukan.', 'error');
         router.push('/santri');
       }
     } catch (error) {
       console.error('Error fetching student:', error);
-      alert('Gagal mengambil data santri.');
+      showToast('Gagal mengambil data santri.', 'error');
       router.push('/santri');
     } finally {
       setIsFetching(false);
@@ -91,11 +93,11 @@ export default function EditSantriPage() {
     if (!user) return;
 
     if (!name.trim()) {
-      alert('Nama santri wajib diisi.');
+      showToast('Nama santri wajib diisi.', 'error');
       return;
     }
     if (!birthDate) {
-      alert('Tanggal lahir wajib diisi.');
+      showToast('Tanggal lahir wajib diisi.', 'error');
       return;
     }
 
@@ -111,11 +113,11 @@ export default function EditSantriPage() {
         updated_at: new Date().toISOString(),
       });
 
-      alert(`Perubahan data santri "${name.trim()}" berhasil disimpan!`);
+      showToast(`Perubahan data santri "${name.trim()}" berhasil disimpan!`, 'success');
       router.push('/santri');
     } catch (error) {
       console.error('Error updating santri:', error);
-      alert('Gagal memperbarui data santri. Silakan coba lagi.');
+      showToast('Gagal memperbarui data santri. Silakan coba lagi.', 'error');
       setIsSubmitting(false);
     }
   };

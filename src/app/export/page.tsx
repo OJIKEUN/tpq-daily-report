@@ -9,6 +9,7 @@ import { FileSpreadsheet, FileText, CloudDownload, Calendar, CalendarRange, Chev
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { generateExcel, generatePDF, ReportData, UserProfile } from '@/lib/exportUtils';
+import { useToast } from '@/context/ToastContext';
 
 const MONTHS = [
   'Januari','Februari','Maret','April','Mei','Juni',
@@ -17,6 +18,7 @@ const MONTHS = [
 
 export default function ExportPage() {
   const { user, loading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
@@ -35,7 +37,7 @@ export default function ExportPage() {
     try {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (!userDoc.exists() || !userDoc.data().name) {
-        alert('Lengkapi profil Anda terlebih dahulu.');
+        showToast('Lengkapi profil Anda terlebih dahulu.', 'error');
         setIsExporting(false);
         return router.push('/profile');
       }
@@ -51,11 +53,16 @@ export default function ExportPage() {
       const reports: ReportData[] = [];
       snap.forEach((d) => reports.push(d.data() as ReportData));
 
-      if (!reports.length) { alert('Tidak ada laporan pada periode ini.'); setIsExporting(false); return; }
+      if (!reports.length) { 
+        showToast('Tidak ada laporan pada periode ini.', 'error'); 
+        setIsExporting(false); 
+        return; 
+      }
       if (format === 'excel') await generateExcel(m, selectedYear, profile, reports);
       else await generatePDF(m, selectedYear, profile, reports);
+      showToast(`Berhasil mengekspor laporan ${format.toUpperCase()}`, 'success');
     } catch (error: any) { 
-      alert('Terjadi kesalahan saat export: ' + (error?.message || String(error))); 
+      showToast('Terjadi kesalahan saat export: ' + (error?.message || String(error)), 'error'); 
     }
     finally { setIsExporting(false); }
   };

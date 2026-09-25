@@ -7,9 +7,11 @@ import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Calendar, FileText, AlignLeft, Send, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/context/ToastContext';
 
 export default function CreateReportPage() {
   const { user, userData } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -32,7 +34,7 @@ export default function CreateReportPage() {
       );
 
       if (!existingSnap.empty) {
-        alert('Data pada tanggal tersebut sudah pernah ditambahkan!');
+        showToast('Data pada tanggal tersebut sudah pernah ditambahkan!', 'error');
         setIsSubmitting(false);
         return;
       }
@@ -41,9 +43,10 @@ export default function CreateReportPage() {
         user_id: user.uid, user_name: userData.name,
         report_date: date, activity, description, created_at: new Date().toISOString(),
       });
+      showToast('Laporan harian berhasil disimpan!', 'success');
       router.push('/history');
     } catch {
-      alert('Gagal menyimpan laporan.');
+      showToast('Gagal menyimpan laporan.', 'error');
       setIsSubmitting(false);
     }
   };

@@ -15,6 +15,7 @@ import {
   HeartHandshake
 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/context/ToastContext';
 
 const GRADE_OPTIONS = [
   'TK / PAUD / Belum Sekolah',
@@ -34,6 +35,7 @@ const GRADE_OPTIONS = [
 
 export default function CreateSantriPage() {
   const { user, userData, loading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -49,11 +51,11 @@ export default function CreateSantriPage() {
     if (!user || !userData) return;
 
     if (!name.trim()) {
-      alert('Nama santri wajib diisi.');
+      showToast('Nama santri wajib diisi.', 'error');
       return;
     }
     if (!birthDate) {
-      alert('Tanggal lahir wajib diisi.');
+      showToast('Tanggal lahir wajib diisi.', 'error');
       return;
     }
 
@@ -72,11 +74,11 @@ export default function CreateSantriPage() {
         updated_at: new Date().toISOString(),
       });
 
-      alert(`Data santri "${name.trim()}" berhasil disimpan!`);
+      showToast(`Data santri "${name.trim()}" berhasil disimpan!`, 'success');
       router.push('/santri');
     } catch (error) {
       console.error('Error adding santri:', error);
-      alert('Gagal menyimpan data santri. Silakan coba lagi.');
+      showToast('Gagal menyimpan data santri. Silakan coba lagi.', 'error');
       setIsSubmitting(false);
     }
   };

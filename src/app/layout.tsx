@@ -5,6 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 import { AuthProvider } from '@/context/AuthContext'
+import { ToastProvider } from '@/context/ToastContext'
+import PwaRegister from '@/components/PwaRegister'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -26,8 +28,6 @@ export const metadata: Metadata = {
   },
 }
 
-import PwaRegister from '@/components/PwaRegister'
-
 export default function RootLayout({
   children,
 }: {
@@ -35,26 +35,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" data-theme="emerald">
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.onerror = function(message, source, lineno, colno, error) {
-                alert("JS Error: " + message);
-              };
-              window.addEventListener('unhandledrejection', function(event) {
-                alert("Promise Error: " + (event.reason ? event.reason.message : 'Unknown'));
-              });
-            `,
-          }}
-        />
-      </head>
       <body className={inter.className}>
         <AuthProvider>
-          <div className="app-container">
-            {children}
-          </div>
-          <PwaRegister />
+          <ToastProvider>
+            <div className="app-container">
+              {children}
+            </div>
+            <PwaRegister />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
