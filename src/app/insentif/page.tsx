@@ -137,7 +137,7 @@ export default function InsentifPage() {
                 >
                   <div 
                     className="collapse-title flex items-center gap-3 p-4 pr-12 min-h-0 cursor-pointer"
-                    onClick={() => setExpandedId(open ? null : r.id)}
+                    onClick={() => setExpandedId(open ? null : (r.id || null))}
                   >
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
                       <FileText size={18} className="text-emerald-600" />

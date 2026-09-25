@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { LogOut, Users, BarChart3, ShieldCheck } from 'lucide-react';
+import { LogOut, Users, BarChart3, ShieldCheck, GraduationCap } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
@@ -51,9 +51,22 @@ export default function AdminPage() {
           <div className="card-body p-6">
             <p className="text-white/90 text-xs font-bold uppercase tracking-widest mb-1">Super Admin</p>
             <h2 className="card-title text-xl font-bold text-white">Manajemen TPQ Daruttaubah</h2>
-            <p className="text-white/80 text-sm mt-1">Kelola guru dan pantau laporan harian</p>
+            <p className="text-white/80 text-sm mt-1">Kelola guru, santri, dan pantau laporan harian</p>
           </div>
         </div>
+
+        <Link href="/santri" className="card bg-base-100 shadow-sm border border-base-200 mb-4 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md hover:border-base-300 group block">
+          <div className="card-body p-5 flex-row gap-4 items-start">
+            <div className="w-12 h-12 rounded-xl bg-teal-600 flex items-center justify-center shadow-md shadow-teal-600/20 shrink-0 group-active:scale-95 transition-transform" style={{ backgroundColor: '#0d9488' }}>
+              <Users size={22} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-base-content text-[15px]">Data Santri</h3>
+              <p className="text-xs text-base-content/60 mt-1 leading-relaxed">Lihat dan kelola seluruh data santriwan & santriwati.</p>
+              <div className="text-teal-600 text-xs font-semibold mt-3 flex items-center gap-1 group-hover:underline">Buka menu &rarr;</div>
+            </div>
+          </div>
+        </Link>
 
         <Link href="/admin/teachers" className="card bg-base-100 shadow-sm border border-base-200 mb-4 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md hover:border-base-300 group block">
           <div className="card-body p-5 flex-row gap-4 items-start">

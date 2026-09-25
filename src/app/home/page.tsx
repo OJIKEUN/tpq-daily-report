@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
 import Link from 'next/link';
-import { PenLine, History, User, Download, ChevronRight, FileText } from 'lucide-react';
+import { PenLine, History, User, Download, ChevronRight, FileText, Users } from 'lucide-react';
 
 export default function HomePage() {
   const { user, userData, loading } = useAuth();
@@ -62,15 +62,19 @@ export default function HomePage() {
           <p className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-4 px-1">Menu Utama</p>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {[
-              { href: '/history', icon: History, label: 'Riwayat', subtitle: 'Lihat semua catatan', bgClass: 'bg-blue-500' },
-              { href: '/profile', icon: User, label: 'Profil Saya', subtitle: 'Data diri & kop', bgClass: 'bg-orange-500' },
-              { href: '/insentif', icon: FileText, label: 'Surat Insentif', subtitle: 'Pencairan insentif', bgClass: 'bg-emerald-500' },
-              { href: '/export', icon: Download, label: 'Export Laporan', subtitle: 'Unduh Excel/PDF', bgClass: 'bg-violet-500' },
-            ].map(({ href, icon: Icon, label, subtitle, bgClass }) => (
+              { href: '/santri', icon: Users, label: 'Data Santri', subtitle: 'Santriwan & santriwati', bgClass: 'bg-teal-600', color: '#0d9488' },
+              { href: '/history', icon: History, label: 'Riwayat', subtitle: 'Lihat semua catatan', bgClass: 'bg-blue-500', color: '#3b82f6' },
+              { href: '/profile', icon: User, label: 'Profil Saya', subtitle: 'Data diri & kop', bgClass: 'bg-orange-500', color: '#f97316' },
+              { href: '/insentif', icon: FileText, label: 'Surat Insentif', subtitle: 'Pencairan insentif', bgClass: 'bg-emerald-500', color: '#10b981' },
+              { href: '/export', icon: Download, label: 'Export Laporan', subtitle: 'Unduh Excel/PDF', bgClass: 'bg-violet-500', color: '#8b5cf6' },
+            ].map(({ href, icon: Icon, label, subtitle, bgClass, color }) => (
               <Link key={href} href={href} className="card bg-base-100 shadow-sm hover:shadow-md border border-base-200 active:scale-[0.97] transition-all duration-200">
                 <div className="card-body p-4">
-                  <div className={`w-10 h-10 ${bgClass} rounded-xl flex items-center justify-center text-white mb-3 shadow-sm`}>
-                    <Icon size={20} />
+                  <div 
+                    className={`w-10 h-10 ${bgClass} rounded-xl flex items-center justify-center text-white mb-3 shadow-sm`}
+                    style={{ backgroundColor: color }}
+                  >
+                    <Icon size={20} className="text-white" />
                   </div>
                   <p className="font-bold text-base-content text-sm">{label}</p>
                   <p className="text-[11px] text-base-content/50 mt-1 line-clamp-1">{subtitle}</p>
