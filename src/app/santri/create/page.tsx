@@ -12,7 +12,8 @@ import {
   Users, 
   Send, 
   ChevronLeft,
-  HeartHandshake
+  HeartHandshake,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
@@ -44,6 +45,8 @@ export default function CreateSantriPage() {
   const [fatherName, setFatherName] = useState('');
   const [motherName, setMotherName] = useState('');
   const [grade, setGrade] = useState(GRADE_OPTIONS[1]); // Default 'Kelas 1 SD'
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]);
+  const [status, setStatus] = useState('Aktif');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +71,8 @@ export default function CreateSantriPage() {
         father_name: fatherName.trim(),
         mother_name: motherName.trim(),
         grade,
+        entry_date: entryDate || '',
+        status: status || 'Aktif',
         created_by_uid: user.uid,
         created_by_name: userData.name || user.displayName || 'Guru TPQ',
         created_at: new Date().toISOString(),
@@ -233,6 +238,46 @@ export default function CreateSantriPage() {
                       <option value="Kelas 2 SMA/SMK">Kelas 2 SMA/SMK</option>
                       <option value="Kelas 3 SMA/SMK">Kelas 3 SMA/SMK</option>
                     </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tanggal Mulai Masuk */}
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-semibold">Tanggal Mulai Masuk TPQ</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary z-10">
+                    <Calendar size={18} />
+                  </div>
+                  <input
+                    type="date"
+                    className="input input-bordered w-full pl-10 focus:input-primary"
+                    value={entryDate}
+                    onChange={(e) => setEntryDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Status Santri (Dropdown) */}
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-semibold">Status Santri / Keterangan</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary z-10">
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <select
+                    className="select select-bordered w-full pl-10 focus:select-primary"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                  >
+                    <option value="Aktif">🟢 Aktif</option>
+                    <option value="Tidak Aktif">⚪ Tidak Aktif</option>
+                    <option value="Lulus">🎓 Lulus</option>
+                    <option value="Pindah">📦 Pindah</option>
                   </select>
                 </div>
               </div>

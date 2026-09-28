@@ -16,6 +16,10 @@ export interface ExportSantriItem {
   father_name: string;
   mother_name: string;
   grade: string;
+  entry_date?: string;
+  status?: string;
+  created_by_name?: string;
+  created_by_uid?: string;
 }
 
 export interface ExportSantriOptions {
@@ -23,9 +27,14 @@ export interface ExportSantriOptions {
   tanggalPengesahan: string; // YYYY-MM-DD
   penandaTangan: string;     // e.g. "Sugiarti"
   subtitle?: string;         // e.g. "Semua Kelas" or "Kelas 1 SD"
+  namaGuru?: string;
+  alamatGuru?: string;
+  noHpGuru?: string;
+  tahunAjaran?: string;      // e.g. "2026/2027"
+  includeGrade?: boolean;
 }
 
-const formatDateIndo = (dateStr: string) => {
+const formatDateIndo = (dateStr?: string) => {
   if (!dateStr) return '-';
   try {
     const parts = dateStr.split('-');
@@ -38,7 +47,10 @@ const formatDateIndo = (dateStr: string) => {
       }
     }
     const d = new Date(dateStr);
-    return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    if (!isNaN(d.getTime())) {
+      return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    return dateStr;
   } catch {
     return dateStr;
   }
@@ -52,24 +64,46 @@ export const generateSantriExcel = async ({
   tanggalPengesahan,
   penandaTangan,
   subtitle = 'Semua Tingkat / Kelas',
+  namaGuru = '',
+  alamatGuru = '',
+  noHpGuru = '',
+  tahunAjaran = '2026/2027',
+  includeGrade = false,
 }: ExportSantriOptions) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Data Santri');
 
+  const endCol = includeGrade ? 'H' : 'G';
+  const sigCol = includeGrade ? 'G' : 'F';
+
   // Atur lebar kolom (rapi dan proporsional)
-  worksheet.columns = [
-    { width: 3 },   // A (padding)
-    { width: 6 },   // B: NO
-    { width: 28 },  // C: NAMA SANTRI
-    { width: 16 },  // D: JENIS KELAMIN
-    { width: 20 },  // E: TANGGAL LAHIR
-    { width: 32 },  // F: NAMA ORANG TUA
-    { width: 20 },  // G: KELAS
-    { width: 3 },   // H (padding)
-  ];
+  if (includeGrade) {
+    worksheet.columns = [
+      { width: 3 },   // A (padding)
+      { width: 6 },   // B: No
+      { width: 28 },  // C: Nama Santri
+      { width: 18 },  // D: TTL
+      { width: 18 },  // E: Kelas
+      { width: 32 },  // F: Nama Orang Tua
+      { width: 18 },  // G: tggl Mulai Masuk
+      { width: 15 },  // H: Keterangan
+      { width: 3 },   // I (padding)
+    ];
+  } else {
+    worksheet.columns = [
+      { width: 3 },   // A (padding)
+      { width: 6 },   // B: No
+      { width: 30 },  // C: Nama Santri
+      { width: 20 },  // D: TTL
+      { width: 32 },  // E: Nama Orang Tua
+      { width: 20 },  // F: tggl Mulai Masuk
+      { width: 16 },  // G: Keterangan
+      { width: 3 },   // H (padding)
+    ];
+  }
 
   // KOP SURAT
-  [2, 3, 4, 5, 6].forEach(r => worksheet.getRow(r).height = 22);
+  [2, 3, 4, 5, 6].forEach((r) => (worksheet.getRow(r).height = 22));
 
   // Logo TPQ
   try {
@@ -87,94 +121,145 @@ export const generateSantriExcel = async ({
   const kopFontTitle2 = { name: 'Stencil', size: 19, bold: true, color: { argb: 'FF00B050' } };
   const kopFontNormal = { name: 'Times New Roman', size: 11 };
 
-  worksheet.mergeCells('C2:G2');
+  worksheet.mergeCells(`C2:${endCol}2`);
   worksheet.getCell('C2').value = `TAMAN PENDIDIKAN AL QUR'AN`;
   worksheet.getCell('C2').font = kopFontTitle1;
   worksheet.getCell('C2').alignment = { horizontal: 'center', vertical: 'middle' };
 
-  worksheet.mergeCells('C3:G3');
+  worksheet.mergeCells(`C3:${endCol}3`);
   worksheet.getCell('C3').value = `DARUTTAUBAH`;
   worksheet.getCell('C3').font = kopFontTitle2;
   worksheet.getCell('C3').alignment = { horizontal: 'center', vertical: 'middle' };
 
-  worksheet.mergeCells('C4:G4');
+  worksheet.mergeCells(`C4:${endCol}4`);
   worksheet.getCell('C4').value = `No. Registrasi : 411227.1.09/TPQ/764/06/2012   No. Statistik : 411221710814`;
   worksheet.getCell('C4').font = kopFontNormal;
   worksheet.getCell('C4').alignment = { horizontal: 'center', vertical: 'middle' };
 
-  worksheet.mergeCells('C5:G5');
+  worksheet.mergeCells(`C5:${endCol}5`);
   worksheet.getCell('C5').value = `Sekretariat: Perum. Merlion Square Fasum Blok L Tg. Uncang, Batu Aji – Batam`;
   worksheet.getCell('C5').font = kopFontNormal;
   worksheet.getCell('C5').alignment = { horizontal: 'center', vertical: 'middle' };
 
-  worksheet.mergeCells('C6:G6');
+  worksheet.mergeCells(`C6:${endCol}6`);
   worksheet.getCell('C6').value = `Telp : 0852-8310-4789 / Email : tpq.daruttaubah@gmail.com`;
   worksheet.getCell('C6').font = kopFontNormal;
   worksheet.getCell('C6').alignment = { horizontal: 'center', vertical: 'middle' };
 
   // Garis pemisah kop
   const sepRow = worksheet.getRow(7);
-  [2, 3, 4, 5, 6, 7].forEach((col) => {
-    sepRow.getCell(col).border = { bottom: { style: 'medium', color: { argb: 'FF006600' } } };
-  });
+  const colCount = includeGrade ? 8 : 7;
+  for (let c = 2; c <= colCount; c++) {
+    sepRow.getCell(c).border = { bottom: { style: 'medium', color: { argb: 'FF006600' } } };
+  }
 
-  // JUDUL TABEL
+  // JUDUL TABEL & IDENTITAS WILAYAH / TAHUN AJARAN
   let row = 9;
-  worksheet.mergeCells(`B${row}:G${row}`);
+  worksheet.mergeCells(`B${row}:${endCol}${row}`);
   worksheet.getCell(`B${row}`).value = 'DATA SANTRIWAN DAN SANTRIWATI';
   worksheet.getCell(`B${row}`).font = { name: 'Times New Roman', size: 13, bold: true };
   worksheet.getCell(`B${row}`).alignment = { horizontal: 'center', vertical: 'middle' };
 
   row = 10;
-  worksheet.mergeCells(`B${row}:G${row}`);
-  worksheet.getCell(`B${row}`).value = `TPQ DARUTTAUBAH BATAM (${subtitle})`;
-  worksheet.getCell(`B${row}`).font = { name: 'Times New Roman', size: 10.5, italic: true };
+  worksheet.mergeCells(`B${row}:${endCol}${row}`);
+  worksheet.getCell(`B${row}`).value = 'KELURAHAN TANJUNG UNCANG, KECAMATAN BATU AJI, KOTA BATAM';
+  worksheet.getCell(`B${row}`).font = { name: 'Times New Roman', size: 11, bold: true };
   worksheet.getCell(`B${row}`).alignment = { horizontal: 'center', vertical: 'middle' };
 
-  // HEADER TABEL
-  row = 12;
-  const headerRow = worksheet.getRow(row);
-  headerRow.height = 22;
-  headerRow.getCell(2).value = 'NO';
-  headerRow.getCell(3).value = 'NAMA SANTRI';
-  headerRow.getCell(4).value = 'JENIS KELAMIN';
-  headerRow.getCell(5).value = 'TANGGAL LAHIR';
-  headerRow.getCell(6).value = 'NAMA ORANG TUA';
-  headerRow.getCell(7).value = 'KELAS';
+  row = 11;
+  worksheet.mergeCells(`B${row}:${endCol}${row}`);
+  worksheet.getCell(`B${row}`).value = `TAHUN AJARAN ${tahunAjaran.toUpperCase()}${subtitle && subtitle !== 'Semua Tingkat / Kelas' ? ` (${subtitle})` : ''}`;
+  worksheet.getCell(`B${row}`).font = { name: 'Times New Roman', size: 11, bold: true };
+  worksheet.getCell(`B${row}`).alignment = { horizontal: 'center', vertical: 'middle' };
 
-  [2, 3, 4, 5, 6, 7].forEach((col) => {
-    const cell = headerRow.getCell(col);
+  // IDENTITAS GURU / PENGAJAR (SESUAI TEMPLATE SCREENSHOT)
+  row = 13;
+  worksheet.getCell(`B${row}`).value = 'NAMA GURU';
+  worksheet.getCell(`B${row}`).font = { name: 'Times New Roman', size: 10, bold: true };
+  worksheet.getCell(`C${row}`).value = `: ${namaGuru || '-'}`;
+  worksheet.getCell(`C${row}`).font = { name: 'Times New Roman', size: 10, bold: true };
+
+  row = 14;
+  worksheet.getCell(`B${row}`).value = 'ALAMAT';
+  worksheet.getCell(`B${row}`).font = { name: 'Times New Roman', size: 10, bold: true };
+  worksheet.getCell(`C${row}`).value = `: ${alamatGuru || '-'}`;
+  worksheet.getCell(`C${row}`).font = { name: 'Times New Roman', size: 10 };
+
+  row = 15;
+  worksheet.getCell(`B${row}`).value = 'NO HP';
+  worksheet.getCell(`B${row}`).font = { name: 'Times New Roman', size: 10, bold: true };
+  worksheet.getCell(`C${row}`).value = `: ${noHpGuru || '-'}`;
+  worksheet.getCell(`C${row}`).font = { name: 'Times New Roman', size: 10 };
+
+  // HEADER TABEL
+  row = 17;
+  const headerRow = worksheet.getRow(row);
+  headerRow.height = 24;
+
+  if (includeGrade) {
+    headerRow.getCell(2).value = 'No';
+    headerRow.getCell(3).value = 'Nama Santri';
+    headerRow.getCell(4).value = 'TTL';
+    headerRow.getCell(5).value = 'Kelas';
+    headerRow.getCell(6).value = 'Nama Orang Tua';
+    headerRow.getCell(7).value = 'tggl Mulai Masuk';
+    headerRow.getCell(8).value = 'Keterangan';
+  } else {
+    headerRow.getCell(2).value = 'No';
+    headerRow.getCell(3).value = 'Nama Santri';
+    headerRow.getCell(4).value = 'TTL';
+    headerRow.getCell(5).value = 'Nama Orang Tua';
+    headerRow.getCell(6).value = 'tggl Mulai Masuk';
+    headerRow.getCell(7).value = 'Keterangan';
+  }
+
+  for (let c = 2; c <= colCount; c++) {
+    const cell = headerRow.getCell(c);
     cell.font = { name: 'Times New Roman', size: 10, bold: true };
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFF2F2F2' },
     };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     cell.border = {
-      top: { style: 'thin' },
+      top: { style: 'medium' },
       left: { style: 'thin' },
-      bottom: { style: 'thin' },
+      bottom: { style: 'medium' },
       right: { style: 'thin' },
     };
-  });
+  }
 
-  // ISI TABEL (DIBUAT RAPAT / COMPACT)
+  // ISI TABEL (RAPAT & PROPORSIONAL)
   row++;
   santriList.forEach((s, index) => {
     const tr = worksheet.getRow(row);
-    tr.height = 20; // Tinggi baris rapat sesuai permintaan
+    tr.height = 22; // Tinggi baris rapat sesuai permintaan
 
     const parents = `Ayah: ${s.father_name || '-'}\nIbu: ${s.mother_name || '-'}`;
-    tr.getCell(2).value = index + 1;
-    tr.getCell(3).value = s.name.toUpperCase();
-    tr.getCell(4).value = s.gender === 'L' ? 'Laki-laki' : 'Perempuan';
-    tr.getCell(5).value = formatDateIndo(s.birth_date);
-    tr.getCell(6).value = parents;
-    tr.getCell(7).value = s.grade;
+    const ttl = formatDateIndo(s.birth_date);
+    const entryDate = formatDateIndo(s.entry_date);
+    const keterangan = s.status || 'Aktif';
 
-    [2, 3, 4, 5, 6, 7].forEach((col) => {
-      const cell = tr.getCell(col);
+    if (includeGrade) {
+      tr.getCell(2).value = index + 1;
+      tr.getCell(3).value = s.name.toUpperCase();
+      tr.getCell(4).value = ttl;
+      tr.getCell(5).value = s.grade;
+      tr.getCell(6).value = parents;
+      tr.getCell(7).value = entryDate;
+      tr.getCell(8).value = keterangan;
+    } else {
+      tr.getCell(2).value = index + 1;
+      tr.getCell(3).value = s.name.toUpperCase();
+      tr.getCell(4).value = ttl;
+      tr.getCell(5).value = parents;
+      tr.getCell(6).value = entryDate;
+      tr.getCell(7).value = keterangan;
+    }
+
+    for (let c = 2; c <= colCount; c++) {
+      const cell = tr.getCell(c);
       cell.font = { name: 'Times New Roman', size: 9.5 };
       cell.border = {
         top: { style: 'thin' },
@@ -182,33 +267,37 @@ export const generateSantriExcel = async ({
         left: { style: 'thin' },
         right: { style: 'thin' },
       };
+
+      const isLeft = includeGrade ? c === 3 || c === 6 : c === 3 || c === 5;
+      const isWrap = includeGrade ? c === 6 : c === 5;
+
       cell.alignment = {
         vertical: 'middle',
-        horizontal: col === 2 || col === 4 || col === 7 ? 'center' : 'left',
-        wrapText: col === 6,
+        horizontal: isLeft ? 'left' : 'center',
+        wrapText: isWrap,
       };
-    });
+    }
 
     row++;
   });
 
-  // TANDA TANGAN (SEPERTI SURAT INSENTIF)
+  // TANDA TANGAN (SEPERTI SURAT INSENTIF & TEMPLATE SCREENSHOT)
   row += 2;
   const tglStr = formatDateIndo(tanggalPengesahan);
 
-  worksheet.getCell(`F${row}`).value = `Batam, ${tglStr}`;
-  worksheet.getCell(`F${row}`).font = { name: 'Times New Roman', size: 11 };
-  worksheet.getCell(`F${row}`).alignment = { horizontal: 'center' };
+  worksheet.getCell(`${sigCol}${row}`).value = `Batam, ${tglStr}`;
+  worksheet.getCell(`${sigCol}${row}`).font = { name: 'Times New Roman', size: 11 };
+  worksheet.getCell(`${sigCol}${row}`).alignment = { horizontal: 'center' };
 
   row++;
-  worksheet.getCell(`F${row}`).value = `Kepala TPQ DARUTTAUBAH`;
-  worksheet.getCell(`F${row}`).font = { name: 'Times New Roman', size: 11 };
-  worksheet.getCell(`F${row}`).alignment = { horizontal: 'center' };
+  worksheet.getCell(`${sigCol}${row}`).value = `Kepala TPQ DARUTTAUBAH`;
+  worksheet.getCell(`${sigCol}${row}`).font = { name: 'Times New Roman', size: 11 };
+  worksheet.getCell(`${sigCol}${row}`).alignment = { horizontal: 'center' };
 
   row += 4;
-  worksheet.getCell(`F${row}`).value = `( ${penandaTangan.toUpperCase()} )`;
-  worksheet.getCell(`F${row}`).font = { name: 'Times New Roman', size: 11, bold: true };
-  worksheet.getCell(`F${row}`).alignment = { horizontal: 'center' };
+  worksheet.getCell(`${sigCol}${row}`).value = `( ${penandaTangan.toUpperCase()} )`;
+  worksheet.getCell(`${sigCol}${row}`).font = { name: 'Times New Roman', size: 11, bold: true };
+  worksheet.getCell(`${sigCol}${row}`).alignment = { horizontal: 'center' };
 
   // Simpan File
   const buffer = await workbook.xlsx.writeBuffer();
@@ -226,10 +315,15 @@ export const generateSantriPDF = async ({
   tanggalPengesahan,
   penandaTangan,
   subtitle = 'Semua Tingkat / Kelas',
+  namaGuru = '',
+  alamatGuru = '',
+  noHpGuru = '',
+  tahunAjaran = '2026/2027',
+  includeGrade = false,
 }: ExportSantriOptions) => {
   const doc = new jsPDF('p', 'mm', 'a4');
 
-  // 1. KOP SURAT (DARI DOKUMEN SURAT INSENTIF)
+  // 1. KOP SURAT
   try {
     const logoResp = await fetch('/logo.png');
     if (logoResp.ok) {
@@ -264,29 +358,79 @@ export const generateSantriPDF = async ({
   doc.setLineWidth(0.8);
   doc.line(14, 43, 196, 43);
 
-  // 2. JUDUL DOKUMEN
-  doc.setFontSize(13);
+  // 2. JUDUL DOKUMEN & SUBTITLE SESUAI TEMPLATE
+  doc.setFontSize(12.5);
   doc.setFont('times', 'bold');
-  doc.text('DATA SANTRIWAN DAN SANTRIWATI', 105, 52, { align: 'center' });
+  doc.text('DATA SANTRIWAN DAN SANTRIWATI', 105, 50, { align: 'center' });
 
   doc.setFontSize(10.5);
-  doc.setFont('times', 'italic');
-  doc.text(`TPQ DARUTTAUBAH BATAM (${subtitle})`, 105, 57, { align: 'center' });
+  doc.text('KELURAHAN TANJUNG UNCANG, KECAMATAN BATU AJI, KOTA BATAM', 105, 55, { align: 'center' });
+  doc.text(`TAHUN AJARAN ${tahunAjaran.toUpperCase()}${subtitle && subtitle !== 'Semua Tingkat / Kelas' ? ` (${subtitle})` : ''}`, 105, 60, { align: 'center' });
 
-  // 3. TABEL DATA SANTRI (DIBUAT RAPAT / TIDAK TERLALU BANYAK JARAK)
-  const tableData = santriList.map((s, index) => [
-    index + 1,
-    s.name.toUpperCase(),
-    s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
-    formatDateIndo(s.birth_date),
-    `Ayah: ${s.father_name || '-'}\nIbu: ${s.mother_name || '-'}`,
-    s.grade,
-  ]);
+  // 3. IDENTITAS GURU
+  doc.setFontSize(9.5);
+  doc.setFont('times', 'bold');
+  doc.text('NAMA GURU', 14, 67);
+  doc.text(`:  ${namaGuru || '-'}`, 42, 67);
+
+  doc.text('ALAMAT', 14, 71.5);
+  doc.setFont('times', 'normal');
+  doc.text(`:  ${alamatGuru || '-'}`, 42, 71.5);
+
+  doc.setFont('times', 'bold');
+  doc.text('NO HP', 14, 76);
+  doc.setFont('times', 'normal');
+  doc.text(`:  ${noHpGuru || '-'}`, 42, 76);
+
+  // 4. TABEL DATA SANTRI (SESUAI TEMPLATE SCREENSHOT)
+  let headCols: string[][];
+  let colStyles: Record<number, any>;
+  let tableData: any[][];
+
+  if (includeGrade) {
+    headCols = [['No', 'Nama Santri', 'TTL', 'Kelas', 'Nama Orang Tua', 'tggl Mulai Masuk', 'Keterangan']];
+    colStyles = {
+      0: { halign: 'center', cellWidth: 8 },   // No
+      1: { halign: 'left', cellWidth: 38 },     // Nama Santri
+      2: { halign: 'center', cellWidth: 26 },   // TTL
+      3: { halign: 'center', cellWidth: 22 },   // Kelas
+      4: { halign: 'left', cellWidth: 44 },     // Nama Orang Tua
+      5: { halign: 'center', cellWidth: 26 },   // tggl Mulai Masuk
+      6: { halign: 'center', cellWidth: 18 },   // Keterangan
+    };
+    tableData = santriList.map((s, index) => [
+      index + 1,
+      s.name.toUpperCase(),
+      formatDateIndo(s.birth_date),
+      s.grade,
+      `Ayah: ${s.father_name || '-'}\nIbu: ${s.mother_name || '-'}`,
+      formatDateIndo(s.entry_date),
+      s.status || 'Aktif',
+    ]);
+  } else {
+    headCols = [['No', 'Nama Santri', 'TTL', 'Nama Orang Tua', 'tggl Mulai Masuk', 'Keterangan']];
+    colStyles = {
+      0: { halign: 'center', cellWidth: 9 },   // No
+      1: { halign: 'left', cellWidth: 45 },     // Nama Santri
+      2: { halign: 'center', cellWidth: 28 },   // TTL
+      3: { halign: 'left', cellWidth: 48 },     // Nama Orang Tua
+      4: { halign: 'center', cellWidth: 28 },   // tggl Mulai Masuk
+      5: { halign: 'center', cellWidth: 24 },   // Keterangan
+    };
+    tableData = santriList.map((s, index) => [
+      index + 1,
+      s.name.toUpperCase(),
+      formatDateIndo(s.birth_date),
+      `Ayah: ${s.father_name || '-'}\nIbu: ${s.mother_name || '-'}`,
+      formatDateIndo(s.entry_date),
+      s.status || 'Aktif',
+    ]);
+  }
 
   autoTable(doc, {
-    startY: 61,
+    startY: 80,
     margin: { left: 14, right: 14 },
-    head: [['NO', 'NAMA SANTRI', 'JENIS KELAMIN', 'TANGGAL LAHIR', 'NAMA ORANG TUA', 'KELAS']],
+    head: headCols,
     body: tableData,
     theme: 'grid',
     headStyles: {
@@ -300,30 +444,23 @@ export const generateSantriPDF = async ({
       lineWidth: 0.1,
       lineColor: 0,
     },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 9 },   // NO
-      1: { halign: 'left', cellWidth: 42 },     // NAMA SANTRI
-      2: { halign: 'center', cellWidth: 24 },   // JENIS KELAMIN
-      3: { halign: 'center', cellWidth: 28 },   // TANGGAL LAHIR
-      4: { halign: 'left', cellWidth: 51 },     // NAMA ORANG TUA
-      5: { halign: 'center', cellWidth: 28 },   // KELAS
-    },
+    columnStyles: colStyles,
     styles: {
       font: 'times',
       fontSize: 8.5,
       textColor: 0,
-      cellPadding: 1.5, // Padding baris sangat rapat sesuai instruksi
+      cellPadding: 1.5, // Padding baris rapat
       lineWidth: 0.1,
       lineColor: 0,
       valign: 'middle',
     },
   });
 
-  // 4. TANDA TANGAN (SEPERTI SURAT INSENTIF)
+  // 5. TANDA TANGAN
   let finalY = (doc as any).lastAutoTable.finalY + 8;
 
   // Jika posisi tanda tangan melebihi batas halaman A4, buat halaman baru
-  if (finalY > 235) {
+  if (finalY > 240) {
     doc.addPage();
     finalY = 25;
   }

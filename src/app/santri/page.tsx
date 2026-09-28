@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { collection, query, orderBy, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
   Users, 
@@ -21,7 +21,12 @@ import {
   RotateCcw,
   Download,
   FileSpreadsheet,
-  FileText
+  FileText,
+  User,
+  Phone,
+  MapPin,
+  CalendarCheck,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
@@ -36,6 +41,8 @@ export interface Santri {
   father_name: string;
   mother_name: string;
   grade: string;
+  entry_date?: string;
+  status?: string;
   created_by_uid?: string;
   created_by_name?: string;
   created_at?: string;
@@ -68,13 +75,28 @@ export default function SantriListPage() {
   const [filteredList, setFilteredList] = useState<Santri[]>([]);
   const [fetching, setFetching] = useState(true);
 
+  // Filters
   const [search, setSearch] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('Semua Kelas');
   const [selectedGender, setSelectedGender] = useState<'ALL' | 'L' | 'P'>('ALL');
+  const [selectedCreator, setSelectedCreator] = useState('ALL');
+
+  // User Profile Data (for export auto-fill)
+  const [userProfile, setUserProfile] = useState<{ name: string; address: string; phone: string }>({
+    name: '',
+    address: '',
+    phone: '',
+  });
 
   // Export States
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportScope, setExportScope] = useState<'ALL' | 'FILTERED'>('ALL');
+  const [exportScope, setExportScope] = useState<'ALL' | 'CREATOR' | 'FILTERED'>('ALL');
+  const [exportCreator, setExportCreator] = useState<string>('ALL');
+  const [exportTeacherName, setExportTeacherName] = useState('');
+  const [exportTeacherAddress, setExportTeacherAddress] = useState('');
+  const [exportTeacherPhone, setExportTeacherPhone] = useState('');
+  const [exportTahunAjaran, setExportTahunAjaran] = useState('2026/2027');
+  const [includeGrade, setIncludeGrade] = useState(false);
   const [tanggalPengesahan, setTanggalPengesahan] = useState(new Date().toISOString().split('T')[0]);
   const [penandaTangan, setPenandaTangan] = useState('Sugiarti');
   const [exporting, setExporting] = useState(false);
@@ -83,8 +105,89 @@ export default function SantriListPage() {
   const [santriToDelete, setSantriToDelete] = useState<Santri | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Unique list of creators
+  const creatorOptions = useMemo(() => {
+    const set = new Set<string>();
+    santriList.forEach((s) => {
+      if (s.created_by_name && s.created_by_name.trim()) {
+        set.add(s.created_by_name.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [santriList]);
+
+  // Load user profile
+  useEffect(() => {
+    if (user) {
+      getDoc(doc(db, 'users', user.uid))
+        .then((snap) => {
+          if (snap.exists()) {
+            const d = snap.data();
+            setUserProfile({
+              name: d.name || userData?.name || user.displayName || '',
+              address: d.address || '',
+              phone: d.phone || '',
+            });
+          } else if (userData?.name) {
+            setUserProfile({
+              name: userData.name,
+              address: '',
+              phone: '',
+            });
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user, userData]);
+
+  const handleOpenExportModal = () => {
+    // If empty, auto-populate from user profile
+    setExportTeacherName((prev) => prev || userProfile.name || userData?.name || user?.displayName || '');
+    setExportTeacherAddress((prev) => prev || userProfile.address || '');
+    setExportTeacherPhone((prev) => prev || userProfile.phone || '');
+
+    // Setup initial scope
+    if (selectedCreator !== 'ALL') {
+      setExportScope('CREATOR');
+      setExportCreator(selectedCreator === 'ME' ? (userData?.name || user?.displayName || 'Saya') : selectedCreator);
+    } else if (selectedGrade !== 'Semua Kelas' || selectedGender !== 'ALL' || search) {
+      setExportScope('FILTERED');
+    } else {
+      setExportScope('ALL');
+    }
+
+    setShowExportModal(true);
+  };
+
   const handleExport = async (type: 'pdf' | 'excel') => {
-    const dataToExport = exportScope === 'FILTERED' ? filteredList : santriList;
+    let dataToExport: Santri[] = [];
+    let subtitle = 'Semua Tingkat / Kelas';
+
+    if (exportScope === 'ALL') {
+      dataToExport = santriList;
+      subtitle = 'Semua Santri';
+    } else if (exportScope === 'CREATOR') {
+      if (exportCreator === 'ALL') {
+        dataToExport = santriList;
+        subtitle = 'Semua Guru / Pembuat';
+      } else {
+        dataToExport = santriList.filter(
+          (s) => s.created_by_name === exportCreator || (exportCreator === 'Saya' && s.created_by_uid === user?.uid)
+        );
+        subtitle = `Guru: ${exportCreator}`;
+      }
+    } else {
+      // FILTERED
+      dataToExport = filteredList;
+      const filters: string[] = [];
+      if (selectedGrade !== 'Semua Kelas') filters.push(selectedGrade);
+      if (selectedGender === 'L') filters.push('Santriwan');
+      if (selectedGender === 'P') filters.push('Santriwati');
+      if (selectedCreator !== 'ALL') filters.push(selectedCreator === 'ME' ? 'Santri Saya' : selectedCreator);
+      if (search) filters.push(`Pencarian: "${search}"`);
+      subtitle = filters.length > 0 ? filters.join(' - ') : 'Data Terfilter';
+    }
+
     if (dataToExport.length === 0) {
       showToast('Tidak ada data santri untuk diekspor.', 'error');
       return;
@@ -92,30 +195,22 @@ export default function SantriListPage() {
 
     setExporting(true);
     try {
-      let subtitle = 'Semua Tingkat / Kelas';
-      if (exportScope === 'FILTERED') {
-        const filters: string[] = [];
-        if (selectedGrade !== 'Semua Kelas') filters.push(selectedGrade);
-        if (selectedGender === 'L') filters.push('Santriwan');
-        if (selectedGender === 'P') filters.push('Santriwati');
-        if (search) filters.push(`Pencarian: "${search}"`);
-        subtitle = filters.length > 0 ? filters.join(' - ') : 'Data Terfilter';
-      }
+      const options = {
+        santriList: dataToExport,
+        tanggalPengesahan,
+        penandaTangan,
+        subtitle,
+        namaGuru: exportTeacherName.trim(),
+        alamatGuru: exportTeacherAddress.trim(),
+        noHpGuru: exportTeacherPhone.trim(),
+        tahunAjaran: exportTahunAjaran.trim() || '2026/2027',
+        includeGrade,
+      };
 
       if (type === 'pdf') {
-        await generateSantriPDF({
-          santriList: dataToExport,
-          tanggalPengesahan,
-          penandaTangan,
-          subtitle,
-        });
+        await generateSantriPDF(options);
       } else {
-        await generateSantriExcel({
-          santriList: dataToExport,
-          tanggalPengesahan,
-          penandaTangan,
-          subtitle,
-        });
+        await generateSantriExcel(options);
       }
       setShowExportModal(false);
       showToast(`Berhasil mengekspor dokumen ${type.toUpperCase()}`, 'success');
@@ -166,12 +261,18 @@ export default function SantriListPage() {
 
       const matchGrade = selectedGrade === 'Semua Kelas' || s.grade === selectedGrade;
       const matchGender = selectedGender === 'ALL' || s.gender === selectedGender;
+      const matchCreator =
+        selectedCreator === 'ALL'
+          ? true
+          : selectedCreator === 'ME'
+          ? s.created_by_uid === user?.uid || s.created_by_name === (userData?.name || user?.displayName)
+          : s.created_by_name === selectedCreator;
 
-      return matchSearch && matchGrade && matchGender;
+      return matchSearch && matchGrade && matchGender && matchCreator;
     });
 
     setFilteredList(result);
-  }, [search, selectedGrade, selectedGender, santriList]);
+  }, [search, selectedGrade, selectedGender, selectedCreator, santriList, user, userData]);
 
   const confirmDelete = async () => {
     if (!santriToDelete) return;
@@ -190,7 +291,7 @@ export default function SantriListPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     try {
       return new Date(dateString).toLocaleDateString('id-ID', {
@@ -214,14 +315,12 @@ export default function SantriListPage() {
     );
   }
 
-  const backUrl = userData?.role === 'admin' ? '/admin' : '/home';
-
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-base-200">
+    <div className="flex-1 flex flex-col min-h-screen bg-base-200 pb-20">
       {/* Top Navbar */}
       <div className="navbar bg-base-100 shadow-sm sticky top-0 z-40 border-b border-base-200">
         <div className="flex-none">
-          <Link href={backUrl} className="btn btn-square btn-ghost">
+          <Link href="/home" className="btn btn-square btn-ghost">
             <ChevronLeft size={24} />
           </Link>
         </div>
@@ -230,13 +329,15 @@ export default function SantriListPage() {
         </div>
       </div>
 
-      <div className="main-content px-5 pt-5 pb-6">
-        {/* Banner Ringkasan */}
-        <div className="card bg-gradient-to-br from-primary to-primary-focus text-primary-content shadow-lg shadow-primary/20 mb-5">
+      <div className="px-4 py-5 max-w-[480px] mx-auto w-full">
+        {/* Banner Statistik Total Santri */}
+        <div className="card bg-gradient-to-r from-primary to-indigo-600 text-primary-content shadow-lg mb-4">
           <div className="card-body p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/80 text-xs font-semibold uppercase tracking-wider">Total Santri Terdaftar</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/80">
+                  Total Santri Terdaftar
+                </p>
                 <h2 className="text-2xl font-bold text-white mt-0.5">{santriList.length} Santri</h2>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -255,7 +356,7 @@ export default function SantriListPage() {
         </div>
 
         {/* Tombol Aksi: Tambah & Export */}
-        <div className="flex gap-2.5 mb-5">
+        <div className="flex gap-2.5 mb-4">
           <Link
             href="/santri/create"
             className="btn btn-primary text-white flex-1 shadow-md shadow-primary/30 text-[14px]"
@@ -264,10 +365,7 @@ export default function SantriListPage() {
           </Link>
           <button
             type="button"
-            onClick={() => {
-              setExportScope((selectedGrade !== 'Semua Kelas' || selectedGender !== 'ALL' || search) ? 'FILTERED' : 'ALL');
-              setShowExportModal(true);
-            }}
+            onClick={handleOpenExportModal}
             className="btn bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 text-[14px] px-4 shrink-0 gap-1.5 border-none"
           >
             <Download size={18} /> Export
@@ -283,8 +381,8 @@ export default function SantriListPage() {
             </div>
             <input
               type="text"
-              className="input input-bordered w-full pl-10 pr-9 focus:input-primary bg-base-200/50 text-sm rounded-xl h-11"
               placeholder="Cari nama santri / orang tua..."
+              className="input input-bordered w-full pl-10 pr-9 text-xs sm:text-sm bg-base-100 rounded-xl h-11 border-base-200 focus:input-primary"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -387,8 +485,48 @@ export default function SantriListPage() {
             </div>
           </div>
 
+          {/* Filter Guru Pembuat (Created User Dropdown) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5 px-0.5">
+              <span className="text-[11px] font-bold text-base-content/60 uppercase tracking-wider">
+                Guru Pembuat (Input By)
+              </span>
+              {selectedCreator !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCreator('ALL')}
+                  className="text-[11px] text-primary hover:underline font-semibold"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-primary">
+                <UserCheck size={18} />
+              </div>
+              <select
+                className="select select-bordered w-full pl-10 focus:select-primary bg-base-100 text-xs sm:text-sm font-medium rounded-xl h-11 border-base-200"
+                value={selectedCreator}
+                onChange={(e) => setSelectedCreator(e.target.value)}
+              >
+                <option value="ALL">👥 Semua Guru / Pembuat</option>
+                {user && (
+                  <option value="ME">
+                    👤 Santri Saya ({userData?.name || user.displayName || 'Saya'})
+                  </option>
+                )}
+                {creatorOptions.map((c) => (
+                  <option key={c} value={c}>
+                    👨‍🏫 {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Quick Filter Info & Reset Button */}
-          {(selectedGrade !== 'Semua Kelas' || selectedGender !== 'ALL' || search) && (
+          {(selectedGrade !== 'Semua Kelas' || selectedGender !== 'ALL' || selectedCreator !== 'ALL' || search) && (
             <div className="flex items-center justify-between pt-2 border-t border-base-200 text-xs">
               <span className="text-base-content/60">
                 Ditemukan <strong className="text-primary font-bold">{filteredList.length}</strong> santri
@@ -399,10 +537,11 @@ export default function SantriListPage() {
                   setSearch('');
                   setSelectedGrade('Semua Kelas');
                   setSelectedGender('ALL');
+                  setSelectedCreator('ALL');
                 }}
                 className="btn btn-ghost btn-xs text-error gap-1 px-2 font-semibold"
               >
-                <RotateCcw size={12} /> Reset Filter
+                <RotateCcw size={12} /> Reset Semua Filter
               </button>
             </div>
           )}
@@ -420,7 +559,7 @@ export default function SantriListPage() {
             </div>
             <h2 className="font-bold text-base-content text-lg">Tidak ada data santri</h2>
             <p className="text-sm text-base-content/60 mt-1 leading-relaxed">
-              {search || selectedGrade !== 'Semua Kelas' || selectedGender !== 'ALL'
+              {search || selectedGrade !== 'Semua Kelas' || selectedGender !== 'ALL' || selectedCreator !== 'ALL'
                 ? 'Tidak ditemukan santri yang sesuai filter pencarian.'
                 : 'Belum ada data santri yang didaftarkan.'}
             </p>
@@ -431,9 +570,9 @@ export default function SantriListPage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-3.5 animate-fade-in pb-12">
-            <div className="text-xs font-semibold text-base-content/60 px-1">
-              Menampilkan {filteredList.length} dari {santriList.length} santri
+          <div className="flex flex-col gap-3.5">
+            <div className="flex items-center justify-between px-1 text-xs text-base-content/60">
+              <span>Menampilkan {filteredList.length} dari {santriList.length} santri</span>
             </div>
 
             {filteredList.map((s) => {
@@ -471,6 +610,19 @@ export default function SantriListPage() {
                             <span className="badge badge-sm badge-ghost font-medium">
                               {s.grade}
                             </span>
+                            <span
+                              className={`badge badge-sm font-semibold text-white ${
+                                (s.status || 'Aktif') === 'Aktif'
+                                  ? 'bg-emerald-600'
+                                  : s.status === 'Lulus'
+                                  ? 'bg-blue-600'
+                                  : s.status === 'Pindah'
+                                  ? 'bg-amber-600'
+                                  : 'bg-slate-500'
+                              }`}
+                            >
+                              {s.status || 'Aktif'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -485,6 +637,14 @@ export default function SantriListPage() {
                         <span className="text-base-content/50">Tgl Lahir:</span>
                         <span className="font-semibold text-base-content">{formatDate(s.birth_date)}</span>
                       </div>
+
+                      {s.entry_date && (
+                        <div className="flex items-center gap-2">
+                          <CalendarCheck size={14} className="text-emerald-600 shrink-0" />
+                          <span className="text-base-content/50">Mulai Masuk:</span>
+                          <span className="font-semibold text-base-content">{formatDate(s.entry_date)}</span>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-2">
                         <HeartHandshake size={14} className="text-primary shrink-0" />
@@ -529,13 +689,13 @@ export default function SantriListPage() {
 
       {/* EXPORT MODAL */}
       {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 animate-fade-in backdrop-blur-xs">
-          <div className="bg-base-100 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-fade-in-scale border border-base-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-3 sm:px-4 animate-fade-in backdrop-blur-xs">
+          <div className="bg-base-100 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in-scale border border-base-200 flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-base-200 flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-b border-base-200 flex items-center justify-between shrink-0 bg-base-100">
               <div>
                 <h3 className="font-bold text-base sm:text-lg text-base-content">Export Data Santri</h3>
-                <p className="text-xs text-base-content/60 mt-0.5">Pilih format dokumen untuk diunduh</p>
+                <p className="text-xs text-base-content/60 mt-0.5">Format Berkas Resmi Badko TPQ Batam</p>
               </div>
               <button
                 type="button"
@@ -547,67 +707,199 @@ export default function SantriListPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-4 sm:p-5 flex flex-col gap-4 max-h-[75vh] overflow-y-auto">
+            {/* Modal Body (Scrollable) */}
+            <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto flex-1 text-xs">
               {/* Cakupan Data */}
               <div className="form-control">
-                <label className="label py-1">
-                  <span className="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
-                    Cakupan Data yang Diexport
+                <label className="label py-0.5">
+                  <span className="label-text font-bold text-xs uppercase tracking-wider text-base-content/70">
+                    Cakupan Santri yang Diexport
                   </span>
                 </label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
+                <div className="grid grid-cols-3 gap-1.5 mt-1">
                   <button
                     type="button"
                     onClick={() => setExportScope('ALL')}
-                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
+                    className={`p-2 rounded-xl border text-[11px] font-semibold flex flex-col items-center justify-center gap-0.5 transition-all ${
                       exportScope === 'ALL'
                         ? 'border-primary bg-primary/10 text-primary shadow-xs'
                         : 'border-base-200 text-base-content/70 hover:bg-base-200/50'
                     }`}
                   >
                     <span>Semua Santri</span>
-                    <span className="text-[10px] opacity-75 font-normal">({santriList.length} Santri)</span>
+                    <span className="text-[10px] opacity-75 font-normal">({santriList.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExportScope('CREATOR');
+                      if (exportCreator === 'ALL' && creatorOptions.length > 0) {
+                        const myName = userData?.name || user?.displayName;
+                        const defaultC = creatorOptions.includes(myName || '') ? myName! : creatorOptions[0];
+                        setExportCreator(defaultC);
+                        setExportTeacherName(defaultC);
+                      }
+                    }}
+                    className={`p-2 rounded-xl border text-[11px] font-semibold flex flex-col items-center justify-center gap-0.5 transition-all ${
+                      exportScope === 'CREATOR'
+                        ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                        : 'border-base-200 text-base-content/70 hover:bg-base-200/50'
+                    }`}
+                  >
+                    <span>By Guru</span>
+                    <span className="text-[10px] opacity-75 font-normal">Pilih Guru</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setExportScope('FILTERED')}
-                    disabled={filteredList.length === santriList.length}
-                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
+                    className={`p-2 rounded-xl border text-[11px] font-semibold flex flex-col items-center justify-center gap-0.5 transition-all ${
                       exportScope === 'FILTERED'
                         ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                        : filteredList.length === santriList.length
-                        ? 'border-base-200 opacity-50 cursor-not-allowed text-base-content/40'
                         : 'border-base-200 text-base-content/70 hover:bg-base-200/50'
                     }`}
                   >
                     <span>Sesuai Filter</span>
-                    <span className="text-[10px] opacity-75 font-normal">({filteredList.length} Santri)</span>
+                    <span className="text-[10px] opacity-75 font-normal">({filteredList.length})</span>
                   </button>
+                </div>
+
+                {/* Dropdown Pemilih Guru (Jika By Guru) */}
+                {exportScope === 'CREATOR' && (
+                  <div className="mt-2.5 p-2.5 bg-base-200/60 rounded-xl border border-base-200 flex flex-col gap-1.5 animate-fade-in">
+                    <label className="text-[11px] font-bold text-base-content/70">
+                      Pilih Guru Pembuat:
+                    </label>
+                    <select
+                      className="select select-bordered select-sm w-full bg-base-100 text-xs rounded-lg"
+                      value={exportCreator}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setExportCreator(val);
+                        if (val !== 'ALL') {
+                          if (val === (userData?.name || user?.displayName) || val === 'Saya') {
+                            setExportTeacherName(userProfile.name || userData?.name || '');
+                            setExportTeacherAddress(userProfile.address || '');
+                            setExportTeacherPhone(userProfile.phone || '');
+                          } else {
+                            setExportTeacherName(val);
+                          }
+                        }
+                      }}
+                    >
+                      <option value="ALL">Semua Guru ({santriList.length} Santri)</option>
+                      {creatorOptions.map((c) => {
+                        const count = santriList.filter((s) => s.created_by_name === c).length;
+                        return (
+                          <option key={c} value={c}>
+                            👨‍🏫 {c} ({count} Santri)
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Data Identitas Guru */}
+              <div className="p-3 bg-base-200/40 rounded-2xl border border-base-200 flex flex-col gap-2.5">
+                <span className="font-bold text-[11px] uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                  <User size={13} className="text-primary" /> Identitas Guru (Pada Dokumen)
+                </span>
+
+                {/* Nama Guru */}
+                <div className="form-control">
+                  <label className="label py-0.5">
+                    <span className="label-text font-semibold text-[11px] text-base-content/70">
+                      Nama Guru
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
+                    value={exportTeacherName}
+                    onChange={(e) => setExportTeacherName(e.target.value)}
+                    placeholder="Contoh: Sugiarti, S.Pd"
+                    disabled={exporting}
+                  />
+                </div>
+
+                {/* Alamat Guru */}
+                <div className="form-control">
+                  <label className="label py-0.5">
+                    <span className="label-text font-semibold text-[11px] text-base-content/70">
+                      Alamat
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
+                    value={exportTeacherAddress}
+                    onChange={(e) => setExportTeacherAddress(e.target.value)}
+                    placeholder="Contoh: Perum Merlion Square Blok L No. 10"
+                    disabled={exporting}
+                  />
+                </div>
+
+                {/* No HP Guru */}
+                <div className="form-control">
+                  <label className="label py-0.5">
+                    <span className="label-text font-semibold text-[11px] text-base-content/70">
+                      Nomor HP / WhatsApp
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
+                    value={exportTeacherPhone}
+                    onChange={(e) => setExportTeacherPhone(e.target.value)}
+                    placeholder="Contoh: 0852-8310-4789"
+                    disabled={exporting}
+                  />
                 </div>
               </div>
 
-              {/* Tanggal Pengesahan */}
-              <div className="form-control">
-                <label className="label py-1">
-                  <span className="label-text font-semibold text-xs text-base-content/70">
-                    Tanggal Surat / Pengesahan
-                  </span>
-                </label>
-                <input
-                  type="date"
-                  className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
-                  value={tanggalPengesahan}
-                  onChange={(e) => setTanggalPengesahan(e.target.value)}
-                  disabled={exporting}
-                />
+              {/* Data Administrasi Dokumen */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Tahun Ajaran */}
+                <div className="form-control">
+                  <label className="label py-0.5">
+                    <span className="label-text font-semibold text-[11px] text-base-content/70">
+                      Tahun Ajaran
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
+                    value={exportTahunAjaran}
+                    onChange={(e) => setExportTahunAjaran(e.target.value)}
+                    placeholder="2026/2027"
+                    disabled={exporting}
+                  />
+                </div>
+
+                {/* Tanggal Surat / Pengesahan */}
+                <div className="form-control">
+                  <label className="label py-0.5">
+                    <span className="label-text font-semibold text-[11px] text-base-content/70">
+                      Tanggal Pengesahan
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    className="input input-bordered input-sm w-full focus:input-primary text-xs rounded-lg"
+                    value={tanggalPengesahan}
+                    onChange={(e) => setTanggalPengesahan(e.target.value)}
+                    disabled={exporting}
+                  />
+                </div>
               </div>
 
               {/* Nama Kepala TPQ (Penandatangan) */}
               <div className="form-control">
-                <label className="label py-1">
-                  <span className="label-text font-semibold text-xs text-base-content/70">
+                <label className="label py-0.5">
+                  <span className="label-text font-semibold text-[11px] text-base-content/70">
                     Nama Penandatangan (Kepala TPQ)
                   </span>
                 </label>
@@ -621,13 +913,27 @@ export default function SantriListPage() {
                 />
               </div>
 
+              {/* Opsi Kolom Kelas */}
+              <label className="flex items-center gap-2.5 p-2.5 rounded-xl border border-base-200 bg-base-100 cursor-pointer hover:bg-base-200/40 transition-colors">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary checkbox-xs rounded-md"
+                  checked={includeGrade}
+                  onChange={(e) => setIncludeGrade(e.target.checked)}
+                />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-xs text-base-content">Sertakan Kolom Kelas</span>
+                  <span className="text-[10px] text-base-content/50">Centang jika ingin menyisipkan kolom Tingkat / Kelas di tabel dokumen</span>
+                </div>
+              </label>
+
               {/* Tombol Export */}
-              <div className="flex flex-col gap-2 pt-2">
+              <div className="flex flex-col gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => handleExport('pdf')}
                   disabled={exporting}
-                  className="btn bg-red-600 hover:bg-red-700 text-white border-none w-full shadow-md shadow-red-600/25 h-11 text-sm font-semibold gap-2"
+                  className="btn bg-red-600 hover:bg-red-700 text-white border-none w-full shadow-md shadow-red-600/25 h-11 text-sm font-semibold gap-2 rounded-xl"
                 >
                   {exporting ? (
                     <span className="loading loading-spinner loading-sm"></span>
@@ -642,7 +948,7 @@ export default function SantriListPage() {
                   type="button"
                   onClick={() => handleExport('excel')}
                   disabled={exporting}
-                  className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full shadow-md shadow-green-600/25 h-11 text-sm font-semibold gap-2"
+                  className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full shadow-md shadow-green-600/25 h-11 text-sm font-semibold gap-2 rounded-xl"
                 >
                   {exporting ? (
                     <span className="loading loading-spinner loading-sm"></span>
@@ -657,7 +963,7 @@ export default function SantriListPage() {
                   type="button"
                   onClick={() => setShowExportModal(false)}
                   disabled={exporting}
-                  className="btn btn-ghost btn-sm w-full mt-1 text-base-content/60"
+                  className="btn btn-ghost btn-sm w-full text-base-content/60"
                 >
                   Batal
                 </button>
@@ -666,6 +972,7 @@ export default function SantriListPage() {
           </div>
         </div>
       )}
+
       {/* DELETE CONFIRMATION MODAL */}
       {santriToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 animate-fade-in backdrop-blur-xs">
