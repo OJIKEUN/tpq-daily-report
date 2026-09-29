@@ -56,6 +56,67 @@ const formatDateIndo = (dateStr?: string) => {
   }
 };
 
+const GRADE_RANK: Record<string, number> = {
+  'Kelas 3 SMA/SMK': 13,
+  'Kelas 2 SMA/SMK': 12,
+  'Kelas 1 SMA/SMK': 11,
+  'Kelas 3 SMP': 10,
+  'Kelas 2 SMP': 9,
+  'Kelas 1 SMP': 8,
+  'Kelas 6 SD': 7,
+  'Kelas 5 SD': 6,
+  'Kelas 4 SD': 5,
+  'Kelas 3 SD': 4,
+  'Kelas 2 SD': 3,
+  'Kelas 1 SD': 2,
+  'TK / PAUD / Belum Sekolah': 1,
+};
+
+export const getGradeRank = (grade?: string): number => {
+  if (!grade) return 0;
+  const g = grade.trim();
+  if (GRADE_RANK[g] !== undefined) return GRADE_RANK[g];
+
+  const lower = g.toLowerCase();
+  if (lower.includes('sma') || lower.includes('smk') || lower.includes('ma')) {
+    if (lower.includes('3')) return 13;
+    if (lower.includes('2')) return 12;
+    if (lower.includes('1')) return 11;
+    return 10.5;
+  }
+  if (lower.includes('smp') || lower.includes('mts')) {
+    if (lower.includes('3')) return 10;
+    if (lower.includes('2')) return 9;
+    if (lower.includes('1')) return 8;
+    return 7.5;
+  }
+  if (lower.includes('sd') || lower.includes('mi')) {
+    if (lower.includes('6')) return 7;
+    if (lower.includes('5')) return 6;
+    if (lower.includes('4')) return 5;
+    if (lower.includes('3')) return 4;
+    if (lower.includes('2')) return 3;
+    if (lower.includes('1')) return 2;
+    return 1.5;
+  }
+  if (lower.includes('tk') || lower.includes('paud')) {
+    return 1;
+  }
+  return 0;
+};
+
+export const sortSantriByGradeDesc = (list: ExportSantriItem[]): ExportSantriItem[] => {
+  return [...list].sort((a, b) => {
+    const rankA = getGradeRank(a.grade);
+    const rankB = getGradeRank(b.grade);
+    if (rankA !== rankB) {
+      return rankB - rankA; // Kelas paling besar dulu (13 -> 1)
+    }
+    // Jika kelas sama, urutkan nama secara alfabetis A-Z
+    return (a.name || '').localeCompare(b.name || '', 'id');
+  });
+};
+
 /**
  * EXPORT DATA SANTRI KE EXCEL (.xlsx)
  */
@@ -72,6 +133,8 @@ export const generateSantriExcel = async ({
 }: ExportSantriOptions) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Data Santri');
+
+  const sortedSantri = sortSantriByGradeDesc(santriList);
 
   const endCol = includeGrade ? 'H' : 'G';
   const sigCol = includeGrade ? 'G' : 'F';
@@ -232,7 +295,7 @@ export const generateSantriExcel = async ({
 
   // ISI TABEL (RAPAT & PROPORSIONAL)
   row++;
-  santriList.forEach((s, index) => {
+  sortedSantri.forEach((s, index) => {
     const tr = worksheet.getRow(row);
     tr.height = 22; // Tinggi baris rapat sesuai permintaan
 
@@ -382,7 +445,8 @@ export const generateSantriPDF = async ({
   doc.setFont('times', 'normal');
   doc.text(`:  ${noHpGuru || '-'}`, 42, 76);
 
-  // 4. TABEL DATA SANTRI (SESUAI TEMPLATE SCREENSHOT)
+  // 4. TABEL DATA SANTRI (SESUAI TEMPLATE SCREENSHOT, DIURUT DARI KELAS TERBESAR KE TERKECIL)
+  const sortedSantri = sortSantriByGradeDesc(santriList);
   let headCols: string[][];
   let colStyles: Record<number, any>;
   let tableData: any[][];
@@ -398,7 +462,7 @@ export const generateSantriPDF = async ({
       5: { halign: 'center', cellWidth: 26 },   // tggl Mulai Masuk
       6: { halign: 'center', cellWidth: 18 },   // Keterangan
     };
-    tableData = santriList.map((s, index) => [
+    tableData = sortedSantri.map((s, index) => [
       index + 1,
       s.name.toUpperCase(),
       formatDateIndo(s.birth_date),
@@ -417,7 +481,7 @@ export const generateSantriPDF = async ({
       4: { halign: 'center', cellWidth: 28 },   // tggl Mulai Masuk
       5: { halign: 'center', cellWidth: 24 },   // Keterangan
     };
-    tableData = santriList.map((s, index) => [
+    tableData = sortedSantri.map((s, index) => [
       index + 1,
       s.name.toUpperCase(),
       formatDateIndo(s.birth_date),
